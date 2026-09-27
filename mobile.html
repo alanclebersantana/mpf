@@ -495,7 +495,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "27/09/2026 09:22";
+const VERSAO = "27/09/2026 09:41";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -813,15 +813,23 @@ function alternarSelecao(tipo){
 
 /* ---------- prejuízos ---------- */
 function normPrej(o){
-  const contas = (o.contas || []).map(c => ({id:c.id || uid(), titular:String(c.titular ?? ''), login:String(c.login ?? ''),
-    milhas:Math.round(parseNum(c.milhas)), companhia:String(c.companhia ?? '').toUpperCase(), obs:String(c.obs ?? '')}));
+  const heranca = real(cent(o.milheiro));
+  const contas = (o.contas || []).map(c => {
+    const milhas = Math.round(parseNum(c.milhas));
+    const milheiro = real(cent(c.milheiro)) || (milhas && !c.valorManual ? heranca : 0);
+    const manual = !!c.valorManual || !milhas || !milheiro;
+    return {id:c.id, titular:String(c.titular ?? ''), login:String(c.login ?? ''), milhas, milheiro,
+      valor: manual ? real(cent(c.valor)) : real(Math.round(cent(milheiro) * milhas / 1000)), valorManual: manual,
+      companhia:String(c.companhia ?? '').toUpperCase(), obs:String(c.obs ?? '')};
+  });
   const milheiro = real(cent(o.milheiro));
   const milhas = o.milhasManual ? Math.round(parseNum(o.milhas))
     : (contas.length ? contas.reduce((s,c) => s + c.milhas, 0) : Math.round(parseNum(o.milhas)));
   return {id:o.id, tipo:o.tipo || 'outro', data:parseDate(o.data) || hojeSP(),
     responsavel:String(o.responsavel ?? ''), companhia:String(o.companhia ?? '').toUpperCase(),
     milhas, milheiro, valorManual:!!o.valorManual,
-    valor: o.valorManual ? real(cent(o.valor)) : real(Math.round(cent(milheiro) * milhas / 1000)),
+    valor: contas.length ? real(contas.reduce((s,c) => s + cent(c.valor), 0))
+         : (o.valorManual ? real(cent(o.valor)) : real(Math.round(cent(milheiro) * milhas / 1000))),
     motivo:String(o.motivo ?? ''), obs:String(o.obs ?? ''), prazo:parseDate(o.prazo) || '',
     resolvido:!!o.resolvido, contas, em:o.em || 0};
 }
@@ -879,8 +887,8 @@ function pintarPrejuizos(){
         ${p.motivo ? `<div class="linha"><div class="esq"><b>Motivo</b><span>${esc(p.motivo)}</span></div><div class="dir"></div></div>` : ''}
         ${p.contas.length ? `<div class="sub-t" style="margin-top:11px">Contas (${p.contas.length})</div>
           ${p.contas.map(c => `<div class="linha"><div class="esq"><b>${esc(c.titular || c.login || 'sem titular')}</b>
-            <span>${c.milhas ? c.milhas.toLocaleString('pt-BR') + ' milhas' : ''}${c.companhia ? ' · ' + esc(c.companhia) : ''}${c.obs ? ' · tem observação' : ''}</span></div>
-            <div class="dir"></div></div>`).join('')}` : ''}
+            <span>${c.milhas ? c.milhas.toLocaleString('pt-BR') + ' milhas' : ''}${c.milheiro ? ' · ' + brl(c.milheiro) + ' o milheiro' : ''}${c.companhia ? ' · ' + esc(c.companhia) : ''}${c.obs ? ' · tem observação' : ''}</span></div>
+            <div class="dir" style="color:var(--bad)">${c.valor ? brl(c.valor) : '—'}</div></div>`).join('')}` : ''}
         ${p.obs ? `<div class="obs-mob"><b>Observações e medidas</b>${esc(p.obs).replace(/\n/g,'<br>')}</div>` : ''}
         <div class="nota-card">Para editar este caso, use a versão de computador.</div>
       </div>` : ''}

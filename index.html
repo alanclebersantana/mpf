@@ -720,6 +720,7 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
 .inp.mini{height:31px;font-size:12.5px;padding:0 8px}
 .inp.mini.num{text-align:right}
+.inp.mini.manual{border-color:var(--accent);background:var(--accent-dim)}
 .cia-card{border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden;background:var(--surface);box-shadow:0 1px 3px rgba(22,36,56,.06)}
 /* A — tarja na lateral · B — borda inteira na cor · C — cabeçalho tingido */
 .var-a .cia-card{border-left-width:4px;border-left-style:solid}
@@ -1330,7 +1331,8 @@ try { document.documentElement.dataset.tema =
         <div id="prejFraudes"></div>
         <div class="pl-exp">Clique no responsável para abrir as contas dele. As milhas somam das contas automaticamente, ou marque “milhas manuais” para digitar o total.</div>
       </div>
-      <div class="panel"><h3>Prejuízo — Milhas bloqueadas</h3>
+      <div class="panel"><div class="mn-ph"><h3>Prejuízo — Milhas bloqueadas</h3>
+        <button class="btn sm primary" id="novaBloq">+ Registrar perda</button></div>
         <div id="prejBloq"></div>
         <div class="pl-exp">As milhas migram do estoque para cá quando você as reconhece como perda definitiva — o valor não é contado duas vezes.</div>
       </div>
@@ -1454,7 +1456,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "27/09/2026 09:22";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "27/09/2026 09:41";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2408,8 +2410,7 @@ $('#view-est').addEventListener('click', async e => {
   }
 });
 $('#balEstoque').addEventListener('click', async e => {
-  const perder = e.target.closest('[data-perder]');
-  if (perder) return migrarBloqueada(perder.dataset.perder);
+
   if (e.target.closest('#salvarEstoque')){
     if (!podeEditar()) return toast('Seu acesso é somente leitura.');
     if (await gravarEstoque(lerEstoqueDaTela())) toast('Estoque salvo');
@@ -2697,12 +2698,23 @@ function corSugerida(op){
    Descontam da posição contratual e, por consequência, da operacional.
    ========================================================= */
 function normalizeConta(c){
+  const milhas = Math.round(parseNum(c.milhas));
+  const milheiro = Math.round(parseNum(c.milheiro)*100)/100;
+  const calculado = fromCents(Math.round(toCents(milheiro) * milhas / 1000));
+  // quando não há milhas ou milheiro, o valor é digitado direto
+  const manual = !!c.valorManual || !milhas || !milheiro;
   return {id:c.id || uid(), titular:String(c.titular ?? '').trim(), login:String(c.login ?? '').trim(),
-    senha:String(c.senha ?? ''), milhas:Math.round(parseNum(c.milhas)),
+    senha:String(c.senha ?? ''), milhas, milheiro,
+    valor: manual ? Math.round(parseNum(c.valor)*100)/100 : calculado,
+    valorManual: manual,
     companhia:String(c.companhia ?? '').trim().toUpperCase(), obs:String(c.obs ?? '')};
 }
+const valorDaConta = c => c.valorManual ? c.valor : fromCents(Math.round(toCents(c.milheiro) * c.milhas / 1000));
 function normalizePrejuizo(o){
-  const contas = (o.contas || []).map(normalizeConta);
+  // casos antigos guardavam um milheiro só, no caso; as contas sem milheiro herdam esse valor
+  const heranca = Math.round(parseNum(o.milheiro)*100)/100;
+  const contas = (o.contas || []).map(c => normalizeConta(
+    (!parseNum(c.milheiro) && heranca && parseNum(c.milhas) && !c.valorManual) ? {...c, milheiro: heranca} : c));
   const milheiro = Math.round(parseNum(o.milheiro)*100)/100;
   const somaContas = contas.reduce((s,c) => s + c.milhas, 0);
   const milhas = o.milhasManual ? Math.round(parseNum(o.milhas)) : (contas.length ? somaContas : Math.round(parseNum(o.milhas)));
@@ -2721,7 +2733,9 @@ function normalizePrejuizo(o){
     origemEstoque: String(o.origemEstoque ?? ''),
     contas, porQuem: String(o.porQuem ?? ''), em: o.em || Date.now()};
 }
-const valorPrejuizo = p => p.valorManual ? p.valor : fromCents(Math.round(toCents(p.milheiro) * p.milhas / 1000));
+const valorPrejuizo = p => p.contas.length
+  ? fromCents(p.contas.reduce((s,c) => s + toCents(valorDaConta(c)), 0))
+  : (p.valorManual ? p.valor : fromCents(Math.round(toCents(p.milheiro) * p.milhas / 1000)));
 const totalPrejuizos = (lista) => fromCents((lista || S.prejuizos).reduce((s,p) => s + toCents(valorPrejuizo(p)), 0));
 
 const Prejuizos = {
@@ -2769,6 +2783,17 @@ async function apagarPrejuizo(id){
 const TIPO_PREJ = {fraude:'Fraude', bloqueada:'Milhas bloqueadas perdidas', outro:'Outro prejuízo em milhas'};
 
 /** a linha bloqueada sai do estoque e vira prejuízo, sem contar duas vezes */
+/** abate do estoque bloqueado a diferença entre o que já estava registrado e o novo valor */
+async function ajustarBloqueadaNoEstoque(companhia, milhasAntes, milhasDepois){
+  const dif = (milhasDepois || 0) - (milhasAntes || 0);
+  if (!dif || !companhia) return;
+  const itens = ((S.estoque && S.estoque.itens) || []).map(i => ({...i}));
+  const alvo = itens.find(i => bloqueada(i) && i.companhia === String(companhia).toUpperCase());
+  if (!alvo) return toast(`Não achei estoque bloqueado da ${companhia} para abater.`);
+  alvo.saldo = Math.max(0, (Number(alvo.saldo) || 0) - dif);
+  await gravarEstoque(itens);
+}
+
 async function migrarBloqueada(itemId){
   const item = ((S.estoque && S.estoque.itens) || []).find(i => i.id === itemId);
   if (!item) return;
@@ -2824,7 +2849,6 @@ function renderPrejuizos(){
         <div class="fr-nome"><b>${esc(p.responsavel || '(sem responsável)')}</b>
           <span>${fmtDate(p.data)} · ${p.contas.length} conta(s)${p.companhia ? ' · ' + esc(p.companhia) : ''}</span></div>
         <div class="fr-col"><i>Milhas perdidas</i><b>${p.milhas.toLocaleString('pt-BR')}</b></div>
-        <div class="fr-col"><i>Milheiro</i><b>${brl(p.milheiro)}</b></div>
         <div class="fr-col"><i>Prejuízo</i><b class="bl-neg">${brl(valorPrejuizo(p))}</b></div>
         <div class="fr-col"><i>Verificar até</i><b class="${p.prazo && p.prazo < getTodaySP() && !p.resolvido ? 'bl-neg' : ''}">${p.prazo ? fmtDate(p.prazo) : '—'}</b></div>
         <button class="btn sm ghost" data-obs="${p.id}" title="Observações e medidas">✎ ${p.obs ? '•' : ''}</button>
@@ -2835,7 +2859,6 @@ function renderPrejuizos(){
           <div class="field"><label>Responsável pela conta</label><input class="inp" data-pcampo="responsavel" data-pid="${p.id}" value="${esc(p.responsavel)}"></div>
           <div class="field"><label>Data</label><input class="inp" type="date" data-pcampo="data" data-pid="${p.id}" value="${p.data}"></div>
           <div class="field"><label>Companhia</label><input class="inp" data-pcampo="companhia" data-pid="${p.id}" value="${esc(p.companhia)}"></div>
-          <div class="field"><label>Milheiro</label><input class="inp" data-pcampo="milheiro" data-pid="${p.id}" value="${p.milheiro ? p.milheiro.toFixed(2).replace('.',',') : ''}"></div>
           <div class="field"><label>Milhas perdidas ${p.milhasManual ? '(manual)' : '(somadas das contas)'}</label>
             <input class="inp" data-pcampo="milhas" data-pid="${p.id}" value="${p.milhas ? p.milhas.toLocaleString('pt-BR') : ''}" ${p.milhasManual ? '' : 'disabled'}></div>
           <div class="field"><label>Prazo de verificação</label><input class="inp" type="date" data-pcampo="prazo" data-pid="${p.id}" value="${p.prazo}"></div>
@@ -2850,18 +2873,26 @@ function renderPrejuizos(){
           <div class="sub-cab"><b>Contas fraudadas</b>
             <button class="btn sm primary" data-addconta="${p.id}">+ Acrescentar conta</button></div>
           ${p.contas.length ? `<table class="pl-tab">
-            <thead><tr><th>Titular</th><th>Login</th><th>Senha</th><th class="num">Milhas</th><th>Companhia</th><th></th></tr></thead>
+            <thead><tr><th>Titular</th><th>Login</th><th>Senha</th><th>Companhia</th>
+              <th class="num">Milhas</th><th class="num">Milheiro</th><th class="num">Prejuízo</th><th></th></tr></thead>
             <tbody>${p.contas.map(c => `<tr>
               <td><input class="inp mini" data-ccampo="titular" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.titular)}"></td>
               <td><input class="inp mini" data-ccampo="login" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.login)}"></td>
               <td><input class="inp mini" type="password" data-ccampo="senha" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.senha)}" placeholder="••••••"></td>
-              <td><input class="inp mini num" data-ccampo="milhas" data-pid="${p.id}" data-cid="${c.id}" value="${c.milhas ? c.milhas.toLocaleString('pt-BR') : ''}"></td>
               <td><input class="inp mini" data-ccampo="companhia" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.companhia)}"></td>
+              <td><input class="inp mini num" data-ccampo="milhas" data-pid="${p.id}" data-cid="${c.id}" value="${c.milhas ? c.milhas.toLocaleString('pt-BR') : ''}" placeholder="0"></td>
+              <td><input class="inp mini num" data-ccampo="milheiro" data-pid="${p.id}" data-cid="${c.id}" value="${c.milheiro ? c.milheiro.toFixed(2).replace('.',',') : ''}" placeholder="0,00"></td>
+              <td><input class="inp mini num ${c.valorManual ? 'manual' : ''}" data-ccampo="valor" data-pid="${p.id}" data-cid="${c.id}"
+                   value="${valorDaConta(c) ? valorDaConta(c).toFixed(2).replace('.',',') : ''}" placeholder="0,00"
+                   title="${c.valorManual ? 'valor digitado' : 'calculado das milhas × milheiro'}"></td>
               <td style="white-space:nowrap">
                 <button class="lixo" data-obsc="${p.id}|${c.id}" title="Observações desta conta">✎ ${c.obs ? '•' : ''}</button>
                 <button class="lixo" data-delconta="${p.id}|${c.id}" title="Remover conta">✕</button></td></tr>`).join('')}</tbody>
-            <tfoot><tr><td colspan="3">${p.contas.length} conta(s)</td><td class="num">${soma.toLocaleString('pt-BR')}</td><td colspan="2"></td></tr></tfoot>
+            <tfoot><tr><td colspan="4">${p.contas.length} conta(s)</td>
+              <td class="num">${soma.toLocaleString('pt-BR')}</td><td></td>
+              <td class="num bl-neg">${brl(valorPrejuizo(p))}</td><td></td></tr></tfoot>
           </table>` : '<div class="empty">Nenhuma conta registrada. Use o botão acima.</div>'}
+          <div class="vf-prev">Quando você informa milhas e milheiro, o prejuízo da conta é calculado. Se não souber os dois, digite o valor direto na última coluna.</div>
         </div>
         ${p.obs ? `<div class="obs-box"><b>Observações e medidas</b><div>${esc(p.obs).replace(/\n/g,'<br>')}</div></div>` : ''}
         <div style="margin-top:12px"><button class="btn sm ghost" data-delprej="${p.id}">Apagar este caso</button></div>
@@ -2871,7 +2902,11 @@ function renderPrejuizos(){
 
   /* ----- milhas bloqueadas perdidas ----- */
   const bloq = S.prejuizos.filter(p => p.tipo === 'bloqueada').sort((a,b) => String(b.data).localeCompare(String(a.data)));
-  $('#prejBloq').innerHTML = bloq.length ? `<table class="pl-tab">
+  const bloqueadasNoEstoque = ((S.estoque && S.estoque.itens) || []).filter(i => bloqueada(i));
+  $('#prejBloq').innerHTML = (bloqueadasNoEstoque.length ? `<div class="vf-prev" style="margin-bottom:10px">
+    Em estoque: ${bloqueadasNoEstoque.map(i => `<b>${esc(i.companhia)}</b> ${Number(i.saldo||0).toLocaleString('pt-BR')} milhas`).join(' · ')}
+    — o que você registrar aqui é abatido dessas quantidades.</div>` : '') +
+    (bloq.length ? `<table class="pl-tab">
     <thead><tr><th>Data</th><th>Companhia</th><th class="num">Milhas</th><th class="num">Milheiro</th><th class="num">Prejuízo</th><th>Motivo</th><th></th></tr></thead>
     <tbody>${bloq.map(p => `<tr>
       <td><input class="inp mini" type="date" data-pcampo="data" data-pid="${p.id}" value="${p.data}"></td>
@@ -2883,7 +2918,7 @@ function renderPrejuizos(){
       <td style="white-space:nowrap"><button class="lixo" data-obs="${p.id}" title="Observações">✎ ${p.obs ? '•' : ''}</button>
         <button class="lixo" data-delprej="${p.id}" title="Apagar">✕</button></td></tr>`).join('')}</tbody>
     <tfoot><tr><td colspan="4">${bloq.length} registro(s)</td><td class="num bl-neg">${brl(totalPrejuizos(bloq))}</td><td colspan="2"></td></tr></tfoot>
-  </table>` : '<div class="empty">Nenhuma milha bloqueada reconhecida como perda. Em Controle de estoque, use “marcar como perdida” numa linha bloqueada.</div>';
+  </table>` : '<div class="empty">Nenhuma perda registrada. Use “Registrar perda” e informe a companhia e quantas milhas bloqueadas foram perdidas.</div>');
 
   /* ----- outros prejuízos ----- */
   const outros = S.prejuizos.filter(p => p.tipo === 'outro').sort((a,b) => String(b.data).localeCompare(String(a.data)));
@@ -2950,7 +2985,12 @@ $('#view-prej').addEventListener('click', async e => {
     return gravarPrejuizo({...p, contas: p.contas.filter(x => x.id !== cid)}, 'conta removida do caso');
   }
   const delp = e.target.closest('[data-delprej]');
-  if (delp) return apagarPrejuizo(delp.dataset.delprej);
+  if (delp){
+    const p = S.prejuizos.find(x => x.id === delp.dataset.delprej);
+    if (p && p.tipo === 'bloqueada' && p.milhas && p.companhia)
+      await ajustarBloqueadaNoEstoque(p.companhia, p.milhas, 0);   // devolve ao estoque
+    return apagarPrejuizo(delp.dataset.delprej);
+  }
 });
 /* edição dos campos do prejuízo e das contas */
 $('#view-prej').addEventListener('change', async e => {
@@ -2959,6 +2999,17 @@ $('#view-prej').addEventListener('change', async e => {
   const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
   if (el.dataset.pcampo){
     const k = el.dataset.pcampo;
+    if (p.tipo === 'bloqueada' && ['milhas','companhia'].includes(k)){
+      const novoMilhas = k === 'milhas' ? Math.round(parseNum(el.value)) : p.milhas;
+      const novaCia = k === 'companhia' ? String(el.value).toUpperCase() : p.companhia;
+      if (k === 'companhia' && novaCia !== p.companhia){
+        await ajustarBloqueadaNoEstoque(p.companhia, p.milhas, 0);
+        await ajustarBloqueadaNoEstoque(novaCia, 0, novoMilhas);
+      } else {
+        await ajustarBloqueadaNoEstoque(novaCia, p.milhas, novoMilhas);
+      }
+      return gravarPrejuizo({...p, milhas:novoMilhas, companhia:novaCia}, 'perda de milhas bloqueadas atualizada');
+    }
     const v = el.type === 'checkbox' ? el.checked
             : ['milhas'].includes(k) ? Math.round(parseNum(el.value))
             : ['milheiro'].includes(k) ? parseNum(el.value) : el.value;
@@ -2966,14 +3017,31 @@ $('#view-prej').addEventListener('change', async e => {
   }
   if (el.dataset.ccampo){
     const cid = el.dataset.cid, k = el.dataset.ccampo;
-    const v = k === 'milhas' ? Math.round(parseNum(el.value)) : el.value;
-    return gravarPrejuizo({...p, contas: p.contas.map(c => c.id === cid ? {...c, [k]: v} : c)}, 'conta fraudada atualizada');
+    const v = k === 'milhas' ? Math.round(parseNum(el.value))
+            : ['milheiro','valor'].includes(k) ? parseNum(el.value) : el.value;
+    return gravarPrejuizo({...p, contas: p.contas.map(c => {
+      if (c.id !== cid) return c;
+      const novo = {...c, [k]: v};
+      // digitou o valor direto: passa a valer o digitado
+      if (k === 'valor') novo.valorManual = true;
+      // informou milhas e milheiro: o valor volta a ser calculado
+      if (['milhas','milheiro'].includes(k) && (k === 'milhas' ? v : novo.milhas) && (k === 'milheiro' ? v : novo.milheiro))
+        novo.valorManual = false;
+      return novo;
+    })}, 'conta fraudada atualizada');
   }
 });
 $('#novaFraude').addEventListener('click', async () => {
   const p = await gravarPrejuizo({tipo:'fraude', data:getTodaySP(), responsavel:'', milheiro:0,
     contas:[{id:uid(), titular:'', login:'', senha:'', milhas:0, companhia:'', obs:''}]}, 'fraude registrada');
   if (p){ S.prejAberto = p.id; renderPrejuizos(); }
+});
+$('#novaBloq').addEventListener('click', () => {
+  const cias = ((S.estoque && S.estoque.itens) || []).filter(i => bloqueada(i));
+  gravarPrejuizo({tipo:'bloqueada', data:getTodaySP(),
+    companhia: cias.length === 1 ? cias[0].companhia : '',
+    milheiro: cias.length === 1 ? cias[0].media : 0, milhas:0,
+    motivo:'Milhas bloqueadas reconhecidas como perda'}, 'perda de milhas bloqueadas registrada');
 });
 $('#novoOutro').addEventListener('click', () => gravarPrejuizo({tipo:'outro', data:getTodaySP(), milheiro:0, milhas:0, motivo:''}, 'perda registrada'));
 
@@ -6059,7 +6127,6 @@ function renderPainelPlanilha(){
         ${restritos.map(i => `<div class="rest-item rc-${esc(String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase())}" data-est="${i.id}">
           <div class="rest-cab"><b class="comp comp-${esc(String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase())}">${esc(i.companhia)}</b>
             <span>${esc(i.tipo)}</span>
-            <button class="btn sm ghost" data-perder="${i.id}" title="Reconhecer como perda definitiva">Marcar como perdida</button>
             <button class="lixo" data-remest="${i.id}" title="Remover">✕</button></div>
           <div class="rest-grade">
             <label>Milhas<input class="inp mini" data-campo="saldo" value="${i.saldo ? Number(i.saldo).toLocaleString('pt-BR') : ''}" placeholder="0"></label>
