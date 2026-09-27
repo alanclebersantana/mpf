@@ -901,7 +901,7 @@ function normPrej(o){
 const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
 const RENOMEADAS = {TAM:'LATAM', GOL:'SMILES'};
 const nomeCia = c => { const n = String(c ?? '').trim().toUpperCase(); return RENOMEADAS[n] || n; };
-const TIPO_PREJ = {fraude:'Fraude', bloqueada:'Milhas bloqueadas', outro:'Outra perda'};
+const TIPO_PREJ = {fraude:'Fraude', bloqueada:'Milhas Bloqueadas Perdidas', outro:'Outra perda'};
 const totalPrej = l => real((l || S.prejuizos).reduce((s,p) => s + cent(p.valor), 0));
 const prejDoMes = () => S.prejuizos.filter(p => String(p.data).startsWith(hojeSP().slice(0,7)));
 const prejDoAno = () => S.prejuizos.filter(p => String(p.data).startsWith(hojeSP().slice(0,4)));
