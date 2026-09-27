@@ -117,6 +117,9 @@ button{cursor:pointer;border:none;background:none}
 .field label{font-size:11.5px;color:var(--muted-2);font-weight:700}
 .inp{background:var(--surface);border:1px solid var(--line);border-radius:var(--rs);padding:7px 10px;width:100%;min-width:0}
 .inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-dim)}
+select.inp.mini{text-align:left;text-align-last:left;padding-left:10px;padding-right:28px;
+  background-position:right 9px center;min-width:190px;color:var(--text)}
+select.inp.mini:invalid,select.inp.mini option[value=""]{color:var(--muted-2)}
 select.inp{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2387929F' stroke-width='2'><path d='M6 9l6 6 6-6'/></svg>");background-repeat:no-repeat;background-position:right 8px center;background-size:14px;padding-right:26px}
 .search{position:relative;flex:0 1 320px}
 .search .inp{padding-left:31px}
@@ -793,6 +796,18 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .pl-tab.estoque thead th:first-child{border-radius:var(--rs) 0 0 var(--rs)}
 .pl-tab.estoque thead th:last-child{border-radius:0 var(--rs) var(--rs) 0}
 .pl-tab.estoque .comp{font-size:14.5px;font-weight:800;letter-spacing:.2px;text-transform:none}
+.var-a .cia-card.comp-SMILES{border-left-color:#F2801A}
+.var-b .cia-card.comp-SMILES{border-color:rgba(242,128,26,.55)}
+.var-c .cia-card.comp-SMILES .cia-cab{background:rgba(242,128,26,.10)}
+color:#2F80ED} .comp-SMILES{color:#F2801A} .comp-TAM{color:#D93A2F} .comp-LATAM{color:#D93A2F}
+/* SMILES usa a mesma cor que a GOL tinha */
+.comp-SMILES{color:#F2801A}
+html[data-tema="claro"] .comp-SMILES{color:#B85008}
+.var-a .cia-card.comp-SMILES{border-left-color:#F2801A}
+.var-b .cia-card.comp-SMILES{border-color:rgba(242,128,26,.55)}
+.var-c .cia-card.comp-SMILES .cia-cab{background:rgba(242,128,26,.10)}
+.rest-item.rc-SMILES{border-left-color:#F2801A}
+.tag.comp-SMILES{background:rgba(242,128,26,.22)}
 .comp-AZUL{color:#2F80ED} .comp-GOL{color:#F2801A} .comp-TAM{color:#D93A2F} .comp-LATAM{color:#D93A2F}
 html[data-tema="claro"] .comp-AZUL{color:#15539F} html[data-tema="claro"] .comp-GOL{color:#B85008}
 html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-LATAM{color:#A31F18}
@@ -801,6 +816,8 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 .pl-tab.estoque tr.bloq td:first-child{color:var(--bad);font-weight:700}
 .pl-tab .inp.mini{height:28px;padding:0 8px;font-size:12.5px;text-align:right;width:100%;min-width:90px}
 .pl-tab .inp.mini[type=date]{text-align:left}
+.pl-tab select.inp.mini{text-align:left;text-align-last:left;padding:0 28px 0 10px;min-width:210px;
+  background-position:right 9px center}
 .lixo{color:var(--muted-2);padding:2px 6px;border-radius:4px}
 .lixo:hover{background:var(--bad);color:#fff}
 .lotes-bar{position:relative}
@@ -1456,7 +1473,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "27/09/2026 10:11";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "27/09/2026 10:31";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2928,7 +2945,7 @@ function renderPrejuizos(){
     <tbody>${bloq.map(p => `<tr>
       <td><input class="inp mini" type="date" data-pcampo="data" data-pid="${p.id}" value="${p.data}"></td>
       <td><select class="inp mini" data-pcampo="companhia" data-pid="${p.id}">
-        <option value="">escolha…</option>
+        <option value="">Clique para escolher a cia</option>
         ${ciasBloqueadas().map(c => `<option value="${esc(c.companhia)}" ${c.companhia === p.companhia ? 'selected' : ''}>${esc(c.companhia)} · ${Number(c.saldo||0).toLocaleString('pt-BR')} milhas</option>`).join('')}
         ${p.companhia && !ciasBloqueadas().some(c => c.companhia === p.companhia) ? `<option value="${esc(p.companhia)}" selected>${esc(p.companhia)}</option>` : ''}
       </select></td>
