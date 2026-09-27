@@ -1456,7 +1456,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "27/09/2026 09:41";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "27/09/2026 10:11";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -1823,6 +1823,11 @@ const Repo = {
       unsubEstoque && unsubEstoque();
       unsubEstoque = fdb.collection('config').doc('estoque').onSnapshot(d => {
         S.estoque = d.exists ? {...ESTOQUE_PADRAO, ...d.data()} : {...ESTOQUE_PADRAO};
+        const renomeados = renomearEstoque(S.estoque.itens);
+        if (renomeados){                       // grava uma vez os nomes novos
+          S.estoque = {...S.estoque, itens: renomeados};
+          if (podeEditar()) gravarEstoque(renomeados);
+        }
         if (typeof invalidarCacheIA === 'function') invalidarCacheIA();
         renderAll();
       }, () => {});
@@ -2417,7 +2422,7 @@ $('#balEstoque').addEventListener('click', async e => {
     return;
   }
   if (e.target.closest('#addEstoque')){
-    const comp = prompt('Companhia (AZUL, GOL, TAM…):'); if (!comp) return;
+    const comp = prompt('Companhia (AZUL, SMILES, LATAM…):'); if (!comp) return;
     const tipo = prompt('Tipo da linha:', 'MILHAS PLUS'); if (!tipo) return;
     const itens = [...lerEstoqueDaTela(), {id:'e' + Date.now().toString(36), companhia:comp.trim().toUpperCase(), tipo:tipo.trim().toUpperCase(), saldo:0, media:0, data:''}];
     return gravarEstoque(itens);
@@ -2707,7 +2712,7 @@ function normalizeConta(c){
     senha:String(c.senha ?? ''), milhas, milheiro,
     valor: manual ? Math.round(parseNum(c.valor)*100)/100 : calculado,
     valorManual: manual,
-    companhia:String(c.companhia ?? '').trim().toUpperCase(), obs:String(c.obs ?? '')};
+    companhia: nomeCia(c.companhia), obs:String(c.obs ?? '')};
 }
 const valorDaConta = c => c.valorManual ? c.valor : fromCents(Math.round(toCents(c.milheiro) * c.milhas / 1000));
 function normalizePrejuizo(o){
@@ -2722,7 +2727,7 @@ function normalizePrejuizo(o){
     tipo: ['fraude','bloqueada','outro'].includes(o.tipo) ? o.tipo : 'outro',
     data: parseDate(o.data) || getTodaySP(),
     responsavel: String(o.responsavel ?? '').trim(),
-    companhia: String(o.companhia ?? '').trim().toUpperCase(),
+    companhia: nomeCia(o.companhia),
     milhas, milheiro, milhasManual: !!o.milhasManual,
     valor: o.valor !== undefined && o.valor !== '' && o.valorManual
       ? Math.round(parseNum(o.valor)*100)/100
@@ -2810,6 +2815,18 @@ async function migrarBloqueada(itemId){
 }
 
 /* ---------- tela de prejuízos ---------- */
+/** companhias que têm milhas bloqueadas cadastradas */
+function ciasBloqueadas(){
+  const mapa = new Map();
+  ((S.estoque && S.estoque.itens) || []).filter(bloqueada).forEach(i => {
+    const x = mapa.get(i.companhia) || {companhia:i.companhia, saldo:0, media:i.media || 0};
+    x.saldo += Number(i.saldo) || 0;
+    if (!x.media) x.media = Number(i.media) || 0;
+    mapa.set(i.companhia, x);
+  });
+  return [...mapa.values()];
+}
+
 function renderPrejuizos(){
   if (!$('#prejFraudes')) return;
   const mes = Prejuizos.doMes(), ano = Prejuizos.doAno();
@@ -2910,7 +2927,11 @@ function renderPrejuizos(){
     <thead><tr><th>Data</th><th>Companhia</th><th class="num">Milhas</th><th class="num">Milheiro</th><th class="num">Prejuízo</th><th>Motivo</th><th></th></tr></thead>
     <tbody>${bloq.map(p => `<tr>
       <td><input class="inp mini" type="date" data-pcampo="data" data-pid="${p.id}" value="${p.data}"></td>
-      <td><input class="inp mini" data-pcampo="companhia" data-pid="${p.id}" value="${esc(p.companhia)}"></td>
+      <td><select class="inp mini" data-pcampo="companhia" data-pid="${p.id}">
+        <option value="">escolha…</option>
+        ${ciasBloqueadas().map(c => `<option value="${esc(c.companhia)}" ${c.companhia === p.companhia ? 'selected' : ''}>${esc(c.companhia)} · ${Number(c.saldo||0).toLocaleString('pt-BR')} milhas</option>`).join('')}
+        ${p.companhia && !ciasBloqueadas().some(c => c.companhia === p.companhia) ? `<option value="${esc(p.companhia)}" selected>${esc(p.companhia)}</option>` : ''}
+      </select></td>
       <td><input class="inp mini num" data-pcampo="milhas" data-pid="${p.id}" value="${p.milhas.toLocaleString('pt-BR')}"></td>
       <td><input class="inp mini num" data-pcampo="milheiro" data-pid="${p.id}" value="${p.milheiro.toFixed(2).replace('.',',')}"></td>
       <td class="num forte bl-neg">${brl(valorPrejuizo(p))}</td>
@@ -3005,6 +3026,9 @@ $('#view-prej').addEventListener('change', async e => {
       if (k === 'companhia' && novaCia !== p.companhia){
         await ajustarBloqueadaNoEstoque(p.companhia, p.milhas, 0);
         await ajustarBloqueadaNoEstoque(novaCia, 0, novoMilhas);
+        const cia = ciasBloqueadas().find(c => c.companhia === novaCia);
+        if (cia && cia.media && !p.milheiro)
+          return gravarPrejuizo({...p, companhia:novaCia, milheiro:cia.media}, 'perda de milhas bloqueadas atualizada');
       } else {
         await ajustarBloqueadaNoEstoque(novaCia, p.milhas, novoMilhas);
       }
@@ -5961,12 +5985,25 @@ const mesLongo = ym => { const [a,m] = String(ym).split('-'); return `${MESES[+m
    ========================================================= */
 const CAMPOS_RESTRICAO = [];   // os ativos sob restrição guardam só milhas, valor e data
 const ESTOQUE_PADRAO = {itens: [
-  {id:'e1', companhia:'AZUL', tipo:'MILHAS PLUS',            saldo:0, media:0, data:''},
-  {id:'e2', companhia:'AZUL', tipo:'MILHAS PLUS BLOQUEADAS', saldo:0, media:0, data:''},
-  {id:'e3', companhia:'GOL',  tipo:'MILHAS PLUS',            saldo:0, media:0, data:''},
-  {id:'e4', companhia:'TAM',  tipo:'MILHAS PLUS',            saldo:0, media:0, data:''},
-  {id:'e5', companhia:'TAM',  tipo:'MILHAS PLUS BLOQUEADAS', saldo:0, media:0, data:''}
+  {id:'e1', companhia:'AZUL',   tipo:'MILHAS PLUS',            saldo:0, media:0, data:''},
+  {id:'e2', companhia:'AZUL',   tipo:'MILHAS PLUS BLOQUEADAS', saldo:0, media:0, data:''},
+  {id:'e3', companhia:'SMILES', tipo:'MILHAS PLUS',            saldo:0, media:0, data:''},
+  {id:'e4', companhia:'LATAM',  tipo:'MILHAS PLUS',            saldo:0, media:0, data:''},
+  {id:'e5', companhia:'LATAM',  tipo:'MILHAS PLUS BLOQUEADAS', saldo:0, media:0, data:''}
 ], em:0, porQuem:''};
+/** nomes antigos das companhias, renomeados onde quer que apareçam */
+const RENOMEADAS = {TAM:'LATAM', GOL:'SMILES'};
+const nomeCia = c => { const n = String(c ?? '').trim().toUpperCase(); return RENOMEADAS[n] || n; };
+/** troca os nomes antigos nos itens do estoque; devolve null quando nada muda */
+function renomearEstoque(itens){
+  let mudou = false;
+  const novos = (itens || []).map(i => {
+    const nome = nomeCia(i.companhia);
+    if (nome !== i.companhia) mudou = true;
+    return {...i, companhia: nome};
+  });
+  return mudou ? novos : null;
+}
 const estoqueBase = () => S.estoque || ESTOQUE_PADRAO;
 const bloqueada = i => /BLOQUEAD/i.test(i.tipo);
 /** o total de cada linha é saldo × preço do milheiro ÷ 1000, como na planilha */
@@ -6152,7 +6189,7 @@ function renderPainelPlanilha(){
 function normalizeVenda(o){
   const milhas = Math.round(parseNum(o.milhas));
   const milheiro = Math.round(parseNum(o.milheiro)*100)/100;
-  return {id:o.id || uid(), companhia:String(o.companhia ?? '').trim().toUpperCase(),
+  return {id:o.id || uid(), companhia: nomeCia(o.companhia),
     milhas, milheiro,
     valor: o.valor !== undefined && o.valor !== '' ? Math.round(parseNum(o.valor)*100)/100
          : fromCents(Math.round(toCents(milheiro) * milhas / 1000)),
