@@ -145,6 +145,15 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 
 .dia .e b{color:var(--ok)} .dia .s b{color:var(--accent-2)}
 .dia .saldo b.neg{color:var(--bad)} .dia .saldo b.pos{color:var(--ok)}
+.pj-bts{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
+.pj-bts .bt{height:44px;font-size:14px}
+.conta-cel{background:var(--surface-2);border:1px solid var(--line);border-radius:12px;padding:11px;margin-bottom:10px}
+.conta-pe{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.conta-pe .bt{height:38px;font-size:12.5px}
+.m-campo input.manual,.m-campo select{width:100%;height:46px;padding:0 12px;border:1px solid var(--line);
+  border-radius:10px;background:var(--surface);font:inherit;font-size:16px;color:var(--text)}
+.m-campo input.manual{border-color:var(--accent);background:var(--accent-dim);text-align:right}
+.m-campo select{text-align:left}
 .obs-mob{background:var(--info-dim);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px;line-height:1.5}
 .obs-mob b{display:block;font-size:10.5px;color:var(--info);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
 .nota-card{font-size:11.5px;color:var(--muted-2);margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);line-height:1.45}
@@ -495,7 +504,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "27/09/2026 09:41";
+const VERSAO = "27/09/2026 10:15";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -602,7 +611,11 @@ function escutar(){
   liga('vendas', d => S.vendas = d.map(normVenda));
   liga('prejuizos', d => S.prejuizos = d.map(normPrej));
   liga('auditoria', d => S.log = d, 'ts');
-  solto.push(fdb.collection('config').doc('estoque').onSnapshot(d => { S.estoque = d.exists ? d.data() : {itens:[]}; pintar(); }, () => {}));
+  solto.push(fdb.collection('config').doc('estoque').onSnapshot(d => {
+    const bruto = d.exists ? d.data() : {itens:[]};
+    S.estoque = {...bruto, itens:(bruto.itens || []).map(i => ({...i, companhia: nomeCia(i.companhia)}))};
+    pintar();
+  }, () => {}));
   solto.push(fdb.collection('config').doc('saldo').onSnapshot(d => { S.saldo = d.exists ? d.data() : {valor:0, mesRef:''}; pintar(); }, () => {}));
 }
 function marcarRede(){
@@ -811,6 +824,58 @@ function alternarSelecao(tipo){
   pintarLista(tipo);
 }
 
+/* edição dos campos de prejuízo no celular */
+document.addEventListener('change', async e => {
+  const el = e.target, pid = el.dataset.pj;
+  if (!pid) return;
+  const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
+  if (el.dataset.pcampo){
+    const k = el.dataset.pcampo;
+    const v = k === 'milhas' ? Math.round(parseNum(el.value))
+            : k === 'milheiro' ? real(cent(parseNum(el.value))) : el.value;
+    if (p.tipo === 'bloqueada' && ['milhas','companhia'].includes(k)){
+      const milhasNovo = k === 'milhas' ? v : p.milhas;
+      const ciaNova = k === 'companhia' ? nomeCia(v) : p.companhia;
+      if (k === 'companhia' && ciaNova !== p.companhia){
+        await ajustarBloqCel(p.companhia, p.milhas, 0);
+        await ajustarBloqCel(ciaNova, 0, milhasNovo);
+        const c = ciasBloqCel().find(x => x.companhia === ciaNova);
+        await gravarPrejCel({...p, companhia:ciaNova, milhas:milhasNovo, milheiro: p.milheiro || (c ? c.media : 0)}, 'perda de milhas bloqueadas atualizada');
+      } else {
+        await ajustarBloqCel(ciaNova, p.milhas, milhasNovo);
+        await gravarPrejCel({...p, companhia:ciaNova, milhas:milhasNovo}, 'perda de milhas bloqueadas atualizada');
+      }
+      return pintarPrejuizos();
+    }
+    await gravarPrejCel({...p, [k]: v}, 'prejuízo atualizado');
+    return pintarPrejuizos();
+  }
+  if (el.dataset.ccampo){
+    const cid = el.dataset.cid, k = el.dataset.ccampo;
+    const v = k === 'milhas' ? Math.round(parseNum(el.value))
+            : ['milheiro','valor'].includes(k) ? real(cent(parseNum(el.value))) : el.value;
+    await gravarPrejCel({...p, contas:p.contas.map(c => {
+      if (c.id !== cid) return c;
+      const n = {...c, [k]: v};
+      if (k === 'valor') n.valorManual = true;
+      if (['milhas','milheiro'].includes(k) && (k === 'milhas' ? v : n.milhas) && (k === 'milheiro' ? v : n.milheiro)) n.valorManual = false;
+      return n;
+    })}, 'conta fraudada atualizada');
+    return pintarPrejuizos();
+  }
+});
+
+/** caixa de observações do celular */
+function caixaObsCel(titulo, texto, aoSalvar){
+  abrirFolha(`<h3>Observações</h3><div class="sub">${esc(titulo)}</div>
+    <div class="campo"><label for="obsCel">Observações e medidas tomadas</label>
+      <textarea id="obsCel" rows="7" style="width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;
+        background:var(--surface);font:inherit;font-size:16px;color:var(--text)">${esc(texto || '')}</textarea></div>
+    <div class="acoes duas"><button class="bt forte" data-salvarobs="1">Salvar</button>
+      <button class="bt leve" data-fechar="1">Cancelar</button></div>`);
+  window.__obsSalvar = aoSalvar;
+}
+
 /* ---------- prejuízos ---------- */
 function normPrej(o){
   const heranca = real(cent(o.milheiro));
@@ -820,25 +885,80 @@ function normPrej(o){
     const manual = !!c.valorManual || !milhas || !milheiro;
     return {id:c.id, titular:String(c.titular ?? ''), login:String(c.login ?? ''), milhas, milheiro,
       valor: manual ? real(cent(c.valor)) : real(Math.round(cent(milheiro) * milhas / 1000)), valorManual: manual,
-      companhia:String(c.companhia ?? '').toUpperCase(), obs:String(c.obs ?? '')};
+      companhia: nomeCia(c.companhia), obs:String(c.obs ?? '')};
   });
   const milheiro = real(cent(o.milheiro));
   const milhas = o.milhasManual ? Math.round(parseNum(o.milhas))
     : (contas.length ? contas.reduce((s,c) => s + c.milhas, 0) : Math.round(parseNum(o.milhas)));
   return {id:o.id, tipo:o.tipo || 'outro', data:parseDate(o.data) || hojeSP(),
-    responsavel:String(o.responsavel ?? ''), companhia:String(o.companhia ?? '').toUpperCase(),
+    responsavel:String(o.responsavel ?? ''), companhia: nomeCia(o.companhia),
     milhas, milheiro, valorManual:!!o.valorManual,
     valor: contas.length ? real(contas.reduce((s,c) => s + cent(c.valor), 0))
          : (o.valorManual ? real(cent(o.valor)) : real(Math.round(cent(milheiro) * milhas / 1000))),
     motivo:String(o.motivo ?? ''), obs:String(o.obs ?? ''), prazo:parseDate(o.prazo) || '',
     resolvido:!!o.resolvido, contas, em:o.em || 0};
 }
+const uid = () => Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4);
+const RENOMEADAS = {TAM:'LATAM', GOL:'SMILES'};
+const nomeCia = c => { const n = String(c ?? '').trim().toUpperCase(); return RENOMEADAS[n] || n; };
 const TIPO_PREJ = {fraude:'Fraude', bloqueada:'Milhas bloqueadas', outro:'Outra perda'};
 const totalPrej = l => real((l || S.prejuizos).reduce((s,p) => s + cent(p.valor), 0));
 const prejDoMes = () => S.prejuizos.filter(p => String(p.data).startsWith(hojeSP().slice(0,7)));
 const prejDoAno = () => S.prejuizos.filter(p => String(p.data).startsWith(hojeSP().slice(0,4)));
 const prazosAbertos = () => S.prejuizos.filter(p => p.prazo && !p.resolvido)
   .sort((a,b) => String(a.prazo).localeCompare(String(b.prazo)));
+
+async function gravarPrejCel(dados, rotulo){
+  if (!podeEditar()) return recado('Seu acesso é somente leitura');
+  const p = normPrej({...dados, id: dados.id || undefined});
+  try {
+    const dado = {tipo:p.tipo, data:p.data, responsavel:p.responsavel, companhia:p.companhia,
+      milhas:p.milhas, milheiro:p.milheiro, valor:p.valor, valorManual:p.valorManual,
+      motivo:p.motivo, obs:p.obs, prazo:p.prazo, resolvido:p.resolvido,
+      contas:p.contas.map(c => ({id:c.id, titular:c.titular, login:c.login, milhas:c.milhas,
+        milheiro:c.milheiro, valor:c.valor, valorManual:c.valorManual, companhia:c.companhia, obs:c.obs})),
+      porQuem:APP.nome, em:Date.now()};
+    if (p.id) await fdb.collection('prejuizos').doc(p.id).set(dado);
+    else { const ref = await fdb.collection('prejuizos').add(dado); p.id = ref.id; }
+    await fdb.collection('auditoria').add({ts:Date.now(), uid:APP.uid, nome:APP.nome, origem:'celular',
+      label: rotulo || 'prejuízo registrado', tela:'prej',
+      resumo:[`${TIPO_PREJ[p.tipo]} · ${p.responsavel || p.companhia || '—'} · ${brl(p.valor)}`], total:1});
+    return p;
+  } catch(err){ recado('Não consegui gravar: ' + (err.code || err.message)); }
+}
+async function apagarPrejCel(id){
+  const p = S.prejuizos.find(x => x.id === id); if (!p) return;
+  if (!podeEditar()) return recado('Seu acesso é somente leitura');
+  if (!confirm(`Apagar este prejuízo de ${brl(p.valor)}?\n\nA posição volta ao valor anterior.`)) return;
+  try {
+    if (p.tipo === 'bloqueada' && p.milhas && p.companhia) await ajustarBloqCel(p.companhia, p.milhas, 0);
+    await fdb.collection('prejuizos').doc(id).delete();
+    await fdb.collection('auditoria').add({ts:Date.now(), uid:APP.uid, nome:APP.nome, origem:'celular',
+      label:'prejuízo apagado', tela:'prej', resumo:[`${TIPO_PREJ[p.tipo]} · ${brl(p.valor)}`], total:1});
+    S.prejAberto = '';
+    recado('Prejuízo apagado');
+  } catch(err){ recado('Não consegui apagar: ' + (err.code || err.message)); }
+}
+/** abate (ou devolve) do estoque bloqueado a diferença registrada */
+async function ajustarBloqCel(companhia, antes, depois){
+  const dif = (depois || 0) - (antes || 0);
+  if (!dif || !companhia) return;
+  const itens = ((S.estoque && S.estoque.itens) || []).map(i => ({...i}));
+  const alvo = itens.find(i => /BLOQUEAD/i.test(i.tipo || '') && i.companhia === nomeCia(companhia));
+  if (!alvo) return recado(`Sem estoque bloqueado da ${companhia} para abater`);
+  alvo.saldo = Math.max(0, (Number(alvo.saldo) || 0) - dif);
+  await fdb.collection('config').doc('estoque').set({itens, em:Date.now(), porQuem:APP.nome});
+}
+function ciasBloqCel(){
+  const mapa = new Map();
+  ((S.estoque && S.estoque.itens) || []).filter(i => /BLOQUEAD/i.test(i.tipo || '')).forEach(i => {
+    const x = mapa.get(i.companhia) || {companhia:i.companhia, saldo:0, media:i.media || 0};
+    x.saldo += Number(i.saldo) || 0;
+    if (!x.media) x.media = Number(i.media) || 0;
+    mapa.set(i.companhia, x);
+  });
+  return [...mapa.values()];
+}
 
 function pintarPrejuizos(){
   if (!$('#pjLista')) return;
@@ -865,11 +985,17 @@ function pintarPrejuizos(){
           <span>${TIPO_PREJ[p.tipo]} · ${brl(p.valor)}</span></div>
           <div class="dir" style="color:${dias < 0 ? 'var(--bad)' : dias <= 7 ? 'var(--warn)' : 'var(--muted)'}">
             ${fmtData(p.prazo)}<br><span style="font-size:11px;font-weight:600">${dias < 0 ? `vencido há ${-dias}d` : dias === 0 ? 'hoje' : `faltam ${dias}d`}</span></div></div>`;
-      }).join('')}</div>` : ''}`;
+      }).join('')}</div>` : ''}
+    <div class="pj-bts">
+      <button class="bt forte" data-novopj="fraude">+ Fraude</button>
+      <button class="bt leve" data-novopj="bloqueada">+ Bloqueadas</button>
+      <button class="bt leve" data-novopj="outro">+ Outra perda</button>
+    </div>`;
 
   const lista = S.prejuizos.slice().sort((a,b) => String(b.data).localeCompare(String(a.data)));
   $('#pjLista').innerHTML = lista.length ? lista.map(p => {
     const aberto = S.prejAberto === p.id;
+    const cias = ciasBloqCel();
     return `<div class="m-cia ${aberto ? 'on' : ''}">
       <button class="m-cab" data-prej="${p.id}">
         <span class="nm">${esc(p.responsavel || p.companhia || TIPO_PREJ[p.tipo])}</span>
@@ -879,28 +1005,74 @@ function pintarPrejuizos(){
           <span class="t"><span>Prejuízo</span><b style="color:var(--bad)">${curto(p.valor)}</b></span>
         </span>
       </button>
-      ${aberto ? `<div class="m-corpo">
-        <div class="linha"><div class="esq"><b>Data</b></div><div class="dir">${fmtData(p.data)}</div></div>
-        ${p.companhia ? `<div class="linha"><div class="esq"><b>Companhia</b></div><div class="dir">${esc(p.companhia)}</div></div>` : ''}
-        ${p.milheiro ? `<div class="linha"><div class="esq"><b>Milheiro</b></div><div class="dir">${brl(p.milheiro)}</div></div>` : ''}
-        ${p.prazo ? `<div class="linha"><div class="esq"><b>Verificar até</b></div><div class="dir">${fmtData(p.prazo)}</div></div>` : ''}
-        ${p.motivo ? `<div class="linha"><div class="esq"><b>Motivo</b><span>${esc(p.motivo)}</span></div><div class="dir"></div></div>` : ''}
-        ${p.contas.length ? `<div class="sub-t" style="margin-top:11px">Contas (${p.contas.length})</div>
-          ${p.contas.map(c => `<div class="linha"><div class="esq"><b>${esc(c.titular || c.login || 'sem titular')}</b>
-            <span>${c.milhas ? c.milhas.toLocaleString('pt-BR') + ' milhas' : ''}${c.milheiro ? ' · ' + brl(c.milheiro) + ' o milheiro' : ''}${c.companhia ? ' · ' + esc(c.companhia) : ''}${c.obs ? ' · tem observação' : ''}</span></div>
-            <div class="dir" style="color:var(--bad)">${c.valor ? brl(c.valor) : '—'}</div></div>`).join('')}` : ''}
+      ${!aberto ? '' : `<div class="m-corpo">
+        ${p.tipo === 'fraude' ? `
+          <div class="m-campo"><label>Responsável pela conta</label>
+            <input data-pj="${p.id}" data-pcampo="responsavel" value="${esc(p.responsavel)}" placeholder="quem respondia pelas contas"></div>` : ''}
+        <div class="m-duas">
+          <div class="m-campo"><label>Data</label><input type="date" data-pj="${p.id}" data-pcampo="data" value="${p.data}"></div>
+          <div class="m-campo"><label>Verificar até</label><input type="date" data-pj="${p.id}" data-pcampo="prazo" value="${p.prazo}"></div>
+        </div>
+        ${p.tipo === 'bloqueada' ? `
+          <div class="m-campo"><label>Companhia</label>
+            <select data-pj="${p.id}" data-pcampo="companhia">
+              <option value="">escolha…</option>
+              ${cias.map(c => `<option value="${esc(c.companhia)}" ${c.companhia === p.companhia ? 'selected' : ''}>${esc(c.companhia)} · ${Number(c.saldo||0).toLocaleString('pt-BR')} milhas</option>`).join('')}
+              ${p.companhia && !cias.some(c => c.companhia === p.companhia) ? `<option value="${esc(p.companhia)}" selected>${esc(p.companhia)}</option>` : ''}
+            </select></div>` : p.tipo === 'outro' ? `
+          <div class="m-campo"><label>Companhia</label><input data-pj="${p.id}" data-pcampo="companhia" value="${esc(p.companhia)}" placeholder="AZUL, LATAM, SMILES…"></div>` : ''}
+        ${p.tipo !== 'fraude' ? `
+          <div class="m-campo"><label>Milhas perdidas</label>
+            <input inputmode="numeric" data-pj="${p.id}" data-pcampo="milhas" value="${p.milhas ? p.milhas.toLocaleString('pt-BR') : ''}" placeholder="0"></div>
+          <div class="m-duas">
+            <div class="m-campo"><label>Milheiro</label>
+              <input inputmode="decimal" data-pj="${p.id}" data-pcampo="milheiro" value="${p.milheiro ? p.milheiro.toFixed(2).replace('.',',') : ''}" placeholder="0,00"></div>
+            <div class="m-campo"><label>Prejuízo</label><input value="${brl(p.valor)}" disabled></div>
+          </div>
+          <div class="m-campo"><label>Motivo</label>
+            <input data-pj="${p.id}" data-pcampo="motivo" value="${esc(p.motivo)}" placeholder="o que aconteceu"></div>` : ''}
+
+        ${p.tipo === 'fraude' ? `
+          <div class="sub-t" style="margin-top:12px">Contas fraudadas (${p.contas.length})</div>
+          ${p.contas.map(c => `<div class="conta-cel">
+            <div class="m-campo"><label>Titular</label>
+              <input data-pj="${p.id}" data-cid="${c.id}" data-ccampo="titular" value="${esc(c.titular)}" placeholder="nome do titular"></div>
+            <div class="m-duas">
+              <div class="m-campo"><label>Login</label><input data-pj="${p.id}" data-cid="${c.id}" data-ccampo="login" value="${esc(c.login)}"></div>
+              <div class="m-campo"><label>Companhia</label><input data-pj="${p.id}" data-cid="${c.id}" data-ccampo="companhia" value="${esc(c.companhia)}"></div>
+            </div>
+            <div class="m-campo"><label>Milhas perdidas</label>
+              <input inputmode="numeric" data-pj="${p.id}" data-cid="${c.id}" data-ccampo="milhas" value="${c.milhas ? c.milhas.toLocaleString('pt-BR') : ''}" placeholder="0"></div>
+            <div class="m-duas">
+              <div class="m-campo"><label>Milheiro</label>
+                <input inputmode="decimal" data-pj="${p.id}" data-cid="${c.id}" data-ccampo="milheiro" value="${c.milheiro ? c.milheiro.toFixed(2).replace('.',',') : ''}" placeholder="0,00"></div>
+              <div class="m-campo"><label>Prejuízo ${c.valorManual ? '(digitado)' : '(calculado)'}</label>
+                <input inputmode="decimal" class="${c.valorManual ? 'manual' : ''}" data-pj="${p.id}" data-cid="${c.id}" data-ccampo="valor"
+                  value="${c.valor ? c.valor.toFixed(2).replace('.',',') : ''}" placeholder="0,00"></div>
+            </div>
+            <div class="conta-pe">
+              <button class="bt leve pequeno" data-obscel="${p.id}|${c.id}">Observações ${c.obs ? '•' : ''}</button>
+              <button class="bt leve pequeno" data-delcontacel="${p.id}|${c.id}">Remover conta</button>
+            </div>
+            ${c.obs ? `<div class="obs-mob"><b>Observações</b>${esc(c.obs).replace(/\n/g,'<br>')}</div>` : ''}
+          </div>`).join('')}
+          <button class="m-bt" data-addcontacel="${p.id}">+ Acrescentar conta</button>` : ''}
+
         ${p.obs ? `<div class="obs-mob"><b>Observações e medidas</b>${esc(p.obs).replace(/\n/g,'<br>')}</div>` : ''}
-        <div class="nota-card">Para editar este caso, use a versão de computador.</div>
-      </div>` : ''}
+        <div class="pj-bts" style="margin-top:11px">
+          <button class="bt forte" data-obscel="${p.id}">Observações e medidas</button>
+          <button class="bt leve" data-delpj="${p.id}">Apagar</button>
+        </div>
+      </div>`}
     </div>`;
-  }).join('') : '<div class="vazio">Nenhum prejuízo registrado.</div>';
+  }).join('') : '<div class="vazio">Nenhum prejuízo registrado. Use os botões acima.</div>';
 }
 const curtoN = n => n >= 1e6 ? (n/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi' : n.toLocaleString('pt-BR');
 
 /* ---------- milhas vendidas ---------- */
 function normVenda(o){
   const milhas = Math.round(parseNum(o.milhas)), milheiro = real(cent(o.milheiro));
-  return {id:o.id, companhia:String(o.companhia ?? '').trim().toUpperCase(), milhas, milheiro,
+  return {id:o.id, companhia: nomeCia(o.companhia), milhas, milheiro,
     valor: o.valor ? real(cent(o.valor)) : real(Math.round(cent(milheiro) * milhas / 1000)),
     data: parseDate(o.data) || hojeSP(), pagador:String(o.pagador ?? '').trim(),
     recId:String(o.recId ?? ''), porQuem:String(o.porQuem ?? ''), em:o.em || 0};
@@ -1499,6 +1671,12 @@ document.addEventListener('click', async e => {
   const selecionar = e.target.closest('[data-selecionar]');
   if (selecionar) return alternarSelecao(selecionar.dataset.selecionar);
 
+  if (e.target.closest('[data-salvarobs]')){
+    const t = $('#obsCel') ? $('#obsCel').value : '';
+    fechar();
+    if (window.__obsSalvar) await window.__obsSalvar(t);
+    return;
+  }
   if (e.target.closest('[data-fechar]')) return fechar();
   const criar = e.target.closest('[data-criar]');
   if (criar){
@@ -1539,6 +1717,47 @@ document.addEventListener('click', async e => {
     acao.disabled = true;
     return emLote(tarefa);
   }
+
+  const novo = e.target.closest('[data-novopj]');
+  if (novo){
+    if (!podeEditar()) return recado('Seu acesso é somente leitura');
+    const tipo = novo.dataset.novopj;
+    const cias = ciasBloqCel();
+    const base = {tipo, data:hojeSP(), milhas:0, milheiro:0};
+    if (tipo === 'fraude') base.contas = [{id:uid(), titular:'', login:'', milhas:0, milheiro:0, valor:0, companhia:'', obs:''}];
+    if (tipo === 'bloqueada' && cias.length === 1){ base.companhia = cias[0].companhia; base.milheiro = cias[0].media; }
+    const p = await gravarPrejCel(base, TIPO_PREJ[tipo] + ' registrada');
+    if (p){ S.prejAberto = p.id; pintarPrejuizos(); }
+    return;
+  }
+  const obsc = e.target.closest('[data-obscel]');
+  if (obsc){
+    const [pid, cid] = obsc.dataset.obscel.split('|');
+    const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
+    const c = cid ? p.contas.find(x => x.id === cid) : null;
+    return caixaObsCel(c ? `Conta ${c.titular || c.login || ''}` : (p.responsavel || TIPO_PREJ[p.tipo]),
+      c ? c.obs : p.obs, async txt => {
+        await gravarPrejCel(c ? {...p, contas:p.contas.map(x => x.id === cid ? {...x, obs:txt} : x)} : {...p, obs:txt},
+          'observações registradas');
+        pintarPrejuizos();
+      });
+  }
+  const addc = e.target.closest('[data-addcontacel]');
+  if (addc){
+    const p = S.prejuizos.find(x => x.id === addc.dataset.addcontacel); if (!p) return;
+    await gravarPrejCel({...p, contas:[...p.contas, {id:uid(), titular:'', login:'', milhas:0, milheiro:0, valor:0, companhia:p.companhia, obs:''}]}, 'conta acrescentada');
+    return pintarPrejuizos();
+  }
+  const delc = e.target.closest('[data-delcontacel]');
+  if (delc){
+    const [pid, cid] = delc.dataset.delcontacel.split('|');
+    const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
+    if (!confirm('Remover esta conta do caso?')) return;
+    await gravarPrejCel({...p, contas:p.contas.filter(x => x.id !== cid)}, 'conta removida');
+    return pintarPrejuizos();
+  }
+  const delp = e.target.closest('[data-delpj]');
+  if (delp) return apagarPrejCel(delp.dataset.delpj);
 
   const pj = e.target.closest('[data-prej]');
   if (pj){
