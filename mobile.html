@@ -145,6 +145,8 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 
 .dia .e b{color:var(--ok)} .dia .s b{color:var(--accent-2)}
 .dia .saldo b.neg{color:var(--bad)} .dia .saldo b.pos{color:var(--ok)}
+.obs-mob{background:var(--info-dim);border-radius:10px;padding:10px 12px;margin-top:10px;font-size:13px;line-height:1.5}
+.obs-mob b{display:block;font-size:10.5px;color:var(--info);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
 .nota-card{font-size:11.5px;color:var(--muted-2);margin-top:9px;padding-top:8px;border-top:1px dashed var(--line);line-height:1.45}
 .data-bloco{padding:9px 0;border-bottom:1px solid var(--line-soft)}
 .data-bloco:last-of-type{border-bottom:none}
@@ -362,6 +364,7 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
         <div class="tit">Posição contratual</div>
         <div class="pl"><span>Recebimentos previstos</span><b class="e" id="bEnt">—</b></div>
         <div class="pl"><span>Pagamentos previstos</span><b class="s" id="bSai">—</b></div>
+        <div class="pl hide" id="bPrejLin"><span>Prejuízos registrados</span><b class="bq" id="bPrej">—</b></div>
         <div class="pl forte"><span>Posição contratual líquida</span><b id="bSaude">—</b></div>
       </div>
       <div class="chips-est">
@@ -446,6 +449,12 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 
   </section>
 
+  <!-- PREJUÍZOS -->
+  <section class="tela" id="tela-prej">
+    <div id="pjResumo"></div>
+    <div class="card"><h2>Casos registrados</h2><div id="pjLista"></div></div>
+  </section>
+
   <!-- AUDITORIA -->
   <section class="tela" id="tela-log">
     <div class="card"><h2>Últimas alterações</h2><div id="listaLog"></div></div>
@@ -486,7 +495,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "25/09/2026 10:38";
+const VERSAO = "27/09/2026 09:22";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -495,7 +504,7 @@ const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','ag
 
 const S = {rows:[], rec:[], adi:[], log:[], estoque:{itens:[]}, saldo:{valor:0, mesRef:''},
   tela:'bal', mesSel:'', limite:{lanc:40, rec:40, adi:40},
-  sel:new Set(), selTipo:'', selModo:false, vendas:[], vendaAberta:'', vendaEdit:'', ciaAberta:'', limiteDias:7,
+  sel:new Set(), selTipo:'', selModo:false, vendas:[], vendaAberta:'', vendaEdit:'', ciaAberta:'', limiteDias:7, prejuizos:[], prejAberto:'',
   f:{lanc:{q:'', st:'Pendente', op:'', d1:'', d2:'', v1:'', v2:''},
      rec:{q:'', st:'Previsto', pg:'', d1:'', d2:''},
      adi:{q:'', st:'Aguardando', d1:'', d2:''}}};
@@ -591,6 +600,7 @@ function escutar(){
   liga('recebimentos', d => S.rec = d.map(normRec));
   liga('adiantamentos', d => S.adi = d.map(normAdi));
   liga('vendas', d => S.vendas = d.map(normVenda));
+  liga('prejuizos', d => S.prejuizos = d.map(normPrej));
   liga('auditoria', d => S.log = d, 'ts');
   solto.push(fdb.collection('config').doc('estoque').onSnapshot(d => { S.estoque = d.exists ? d.data() : {itens:[]}; pintar(); }, () => {}));
   solto.push(fdb.collection('config').doc('saldo').onSnapshot(d => { S.saldo = d.exists ? d.data() : {valor:0, mesRef:''}; pintar(); }, () => {}));
@@ -620,8 +630,9 @@ async function gravar(colecao, id, campos, rotulo, resumo){
    ========================================================= */
 const Calc = {
   entradasFuturas(){ return soma(S.rec.filter(ABERTO_REC)); },
+  prejuizos(){ return totalPrej(); },
   saidasFuturas(){ return soma(S.rows.filter(ABERTO)); },
-  saude(){ return real(cent(this.entradasFuturas()) - cent(this.saidasFuturas())); },
+  saude(){ return real(cent(this.entradasFuturas()) - cent(this.saidasFuturas()) - cent(totalPrej())); },
   aReceberEm(d){ return soma(S.rec.filter(r => ABERTO_REC(r) && r.dataPrevista === d)); },
   aPagarEm(d){ return soma(S.rows.filter(r => r.dataPagamento === d && ABERTO(r))); },
   dias(n){
@@ -800,6 +811,84 @@ function alternarSelecao(tipo){
   pintarLista(tipo);
 }
 
+/* ---------- prejuízos ---------- */
+function normPrej(o){
+  const contas = (o.contas || []).map(c => ({id:c.id || uid(), titular:String(c.titular ?? ''), login:String(c.login ?? ''),
+    milhas:Math.round(parseNum(c.milhas)), companhia:String(c.companhia ?? '').toUpperCase(), obs:String(c.obs ?? '')}));
+  const milheiro = real(cent(o.milheiro));
+  const milhas = o.milhasManual ? Math.round(parseNum(o.milhas))
+    : (contas.length ? contas.reduce((s,c) => s + c.milhas, 0) : Math.round(parseNum(o.milhas)));
+  return {id:o.id, tipo:o.tipo || 'outro', data:parseDate(o.data) || hojeSP(),
+    responsavel:String(o.responsavel ?? ''), companhia:String(o.companhia ?? '').toUpperCase(),
+    milhas, milheiro, valorManual:!!o.valorManual,
+    valor: o.valorManual ? real(cent(o.valor)) : real(Math.round(cent(milheiro) * milhas / 1000)),
+    motivo:String(o.motivo ?? ''), obs:String(o.obs ?? ''), prazo:parseDate(o.prazo) || '',
+    resolvido:!!o.resolvido, contas, em:o.em || 0};
+}
+const TIPO_PREJ = {fraude:'Fraude', bloqueada:'Milhas bloqueadas', outro:'Outra perda'};
+const totalPrej = l => real((l || S.prejuizos).reduce((s,p) => s + cent(p.valor), 0));
+const prejDoMes = () => S.prejuizos.filter(p => String(p.data).startsWith(hojeSP().slice(0,7)));
+const prejDoAno = () => S.prejuizos.filter(p => String(p.data).startsWith(hojeSP().slice(0,4)));
+const prazosAbertos = () => S.prejuizos.filter(p => p.prazo && !p.resolvido)
+  .sort((a,b) => String(a.prazo).localeCompare(String(b.prazo)));
+
+function pintarPrejuizos(){
+  if (!$('#pjLista')) return;
+  const mes = prejDoMes(), ano = prejDoAno(), prazos = prazosAbertos();
+  const porTipo = l => { const t = {fraude:0, bloqueada:0, outro:0};
+    l.forEach(p => t[p.tipo] = t[p.tipo] + cent(p.valor)); return t; };
+  const ta = porTipo(ano);
+  $('#pjResumo').innerHTML = `
+    <div class="card destaque pos" style="margin-bottom:10px">
+      <div class="rot">Prejuízo no ano</div>
+      <div class="val" style="color:#FF9F97">${brl(totalPrej(ano))}</div>
+      <div class="bloco">
+        <div class="pl"><span>Fraudes</span><b class="bq">${brl(real(ta.fraude))}</b></div>
+        <div class="pl"><span>Milhas bloqueadas</span><b class="bq">${brl(real(ta.bloqueada))}</b></div>
+        <div class="pl"><span>Outras perdas</span><b class="bq">${brl(real(ta.outro))}</b></div>
+        <div class="pl forte"><span>No mês de ${mesNome(hojeSP().slice(0,7))}</span><b>${brl(totalPrej(mes))}</b></div>
+      </div>
+      <div class="nota">Descontado da posição contratual e da operacional líquida.</div>
+    </div>
+    ${prazos.length ? `<div class="card"><h2>A verificar</h2>
+      ${prazos.map(p => {
+        const dias = Math.round((Date.parse(p.prazo) - Date.parse(hojeSP())) / 864e5);
+        return `<div class="linha"><div class="esq"><b>${esc(p.responsavel || p.companhia || TIPO_PREJ[p.tipo])}</b>
+          <span>${TIPO_PREJ[p.tipo]} · ${brl(p.valor)}</span></div>
+          <div class="dir" style="color:${dias < 0 ? 'var(--bad)' : dias <= 7 ? 'var(--warn)' : 'var(--muted)'}">
+            ${fmtData(p.prazo)}<br><span style="font-size:11px;font-weight:600">${dias < 0 ? `vencido há ${-dias}d` : dias === 0 ? 'hoje' : `faltam ${dias}d`}</span></div></div>`;
+      }).join('')}</div>` : ''}`;
+
+  const lista = S.prejuizos.slice().sort((a,b) => String(b.data).localeCompare(String(a.data)));
+  $('#pjLista').innerHTML = lista.length ? lista.map(p => {
+    const aberto = S.prejAberto === p.id;
+    return `<div class="m-cia ${aberto ? 'on' : ''}">
+      <button class="m-cab" data-prej="${p.id}">
+        <span class="nm">${esc(p.responsavel || p.companhia || TIPO_PREJ[p.tipo])}</span>
+        <span class="tots">
+          <span class="t"><span>Tipo</span><b style="font-size:11px">${TIPO_PREJ[p.tipo]}</b></span>
+          <span class="t"><span>Milhas</span><b>${p.milhas ? curtoN(p.milhas) : '—'}</b></span>
+          <span class="t"><span>Prejuízo</span><b style="color:var(--bad)">${curto(p.valor)}</b></span>
+        </span>
+      </button>
+      ${aberto ? `<div class="m-corpo">
+        <div class="linha"><div class="esq"><b>Data</b></div><div class="dir">${fmtData(p.data)}</div></div>
+        ${p.companhia ? `<div class="linha"><div class="esq"><b>Companhia</b></div><div class="dir">${esc(p.companhia)}</div></div>` : ''}
+        ${p.milheiro ? `<div class="linha"><div class="esq"><b>Milheiro</b></div><div class="dir">${brl(p.milheiro)}</div></div>` : ''}
+        ${p.prazo ? `<div class="linha"><div class="esq"><b>Verificar até</b></div><div class="dir">${fmtData(p.prazo)}</div></div>` : ''}
+        ${p.motivo ? `<div class="linha"><div class="esq"><b>Motivo</b><span>${esc(p.motivo)}</span></div><div class="dir"></div></div>` : ''}
+        ${p.contas.length ? `<div class="sub-t" style="margin-top:11px">Contas (${p.contas.length})</div>
+          ${p.contas.map(c => `<div class="linha"><div class="esq"><b>${esc(c.titular || c.login || 'sem titular')}</b>
+            <span>${c.milhas ? c.milhas.toLocaleString('pt-BR') + ' milhas' : ''}${c.companhia ? ' · ' + esc(c.companhia) : ''}${c.obs ? ' · tem observação' : ''}</span></div>
+            <div class="dir"></div></div>`).join('')}` : ''}
+        ${p.obs ? `<div class="obs-mob"><b>Observações e medidas</b>${esc(p.obs).replace(/\n/g,'<br>')}</div>` : ''}
+        <div class="nota-card">Para editar este caso, use a versão de computador.</div>
+      </div>` : ''}
+    </div>`;
+  }).join('') : '<div class="vazio">Nenhum prejuízo registrado.</div>';
+}
+const curtoN = n => n >= 1e6 ? (n/1e6).toLocaleString('pt-BR',{maximumFractionDigits:1}) + ' mi' : n.toLocaleString('pt-BR');
+
 /* ---------- milhas vendidas ---------- */
 function normVenda(o){
   const milhas = Math.round(parseNum(o.milhas)), milheiro = real(cent(o.milheiro));
@@ -934,7 +1023,8 @@ async function apagarVendaCel(id){
 function pintar(){
   const t = S.tela;
   if (t === 'bal') pintarBalanco();
-  if (t === 'est') pintarBalanco();   // o estoque e as vendas são desenhados juntos
+  if (t === 'est') pintarBalanco();
+  if (t === 'prej') pintarPrejuizos();   // o estoque e as vendas são desenhados juntos
   if (t === 'mes') pintarMes();
   if (t === 'lanc') pintarLista('lanc');
   if (t === 'rec') pintarLista('rec');
@@ -949,6 +1039,9 @@ function pintarBalanco(){
   $('#bPosicao').style.color = (cent(saude) + cent(est.livres)) < 0 ? '#FF9F97' : '#fff';
   $('#bMilhasOk').textContent = brl(est.livres);
   $('#bMilhasBq').textContent = brl(est.bloqueados);
+  const tp = totalPrej();
+  $('#bPrejLin').classList.toggle('hide', !cent(tp));
+  $('#bPrej').textContent = brl(tp);
   $('#bPatrimonio').textContent = `Patrimônio total: ${brl(real(cent(saude) + cent(est.livres) + cent(est.bloqueados)))}`;
   $('#bEnt').textContent = brl(Calc.entradasFuturas());
   $('#bSai').textContent = brl(Calc.saidasFuturas());
@@ -1233,7 +1326,7 @@ function irPara(tela){
   $$('.tela').forEach(s => s.classList.toggle('on', s.id === 'tela-' + tela));
   $$('#barra button[data-tela]').forEach(b => b.classList.toggle('on', b.dataset.tela === tela));
   $('#btMais').classList.toggle('on', !['bal','mes','lanc','rec','est'].includes(tela));
-  $('#tTitulo').textContent = {bal:'Visão geral', mes:'Fluxo de caixa', lanc:'Pagamentos', est:'Estoque de milhas',
+  $('#tTitulo').textContent = {bal:'Visão geral', mes:'Fluxo de caixa', lanc:'Pagamentos', est:'Controle de estoque', prej:'Prejuízos',
     rec:'Recebimentos', adi:'Lotes e adiantamentos', log:'Auditoria'}[tela] || 'MP Financeiro';
   window.scrollTo(0,0);
   pintar();
@@ -1277,6 +1370,7 @@ $('#btNovo').addEventListener('click', abrirNovo);
 function abrirMais(){
   abrirFolha(`<h3>Mais</h3><div class="sub">versão ${VERSAO} · ${esc(APP.nome || '')} (${esc(APP.papel)})</div>
     <div class="opcoes">
+      <button data-ir="prej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Prejuízos</button>
       <button data-ir="adi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>Lotes e adiantamentos</button>
       <button data-ir="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Auditoria</button>
       <button data-tema2="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>Trocar tema</button>
@@ -1438,6 +1532,11 @@ document.addEventListener('click', async e => {
     return emLote(tarefa);
   }
 
+  const pj = e.target.closest('[data-prej]');
+  if (pj){
+    S.prejAberto = S.prejAberto === pj.dataset.prej ? '' : pj.dataset.prej;
+    return pintarPrejuizos();
+  }
   const ciaEst = e.target.closest('[data-ciaest]');
   if (ciaEst){
     S.ciaAberta = S.ciaAberta === ciaEst.dataset.ciaest ? '' : ciaEst.dataset.ciaest;

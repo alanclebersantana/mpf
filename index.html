@@ -700,6 +700,26 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .pl-tab .forte{font-weight:800}
 .pl-tab tfoot td{border-top:1px solid var(--line);border-bottom:none;font-weight:800;background:var(--surface-2)}
 .pl-tab tbody tr:hover td{background:var(--hover)}
+.fr{border:1px solid var(--line);border-radius:var(--r);margin-bottom:11px;overflow:hidden;background:var(--surface)}
+.fr.on{border-color:var(--accent);box-shadow:0 4px 14px rgba(193,86,26,.10)}
+.fr-cab{display:grid;grid-template-columns:minmax(180px,1.4fr) repeat(4,minmax(105px,1fr)) auto;gap:14px;align-items:center;
+  padding:11px 14px;background:var(--surface-2);cursor:pointer}
+.fr-cab:hover{background:var(--surface-3)}
+.fr-nome b{display:block;font-size:14.5px}
+.fr-nome span{font-size:11.5px;color:var(--muted-2)}
+.fr-col{text-align:right}
+.fr-col i{display:block;font-style:normal;font-size:9.5px;font-weight:800;color:var(--muted-2);text-transform:uppercase;letter-spacing:.3px}
+.fr-col b{font-size:13.5px}
+.fr-corpo{padding:13px 14px}
+.fr-contas{margin-top:14px;padding-top:12px;border-top:1px dashed var(--line)}
+.sub-cab{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+.sub-cab b{font-size:12.5px}
+.obs-box{margin-top:12px;background:var(--info-dim);border-radius:var(--rs);padding:11px 13px;font-size:13px;line-height:1.5}
+.bl-alerta{color:var(--warn);font-weight:800}
+.obs-box b{display:block;font-size:11px;color:var(--info);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+.chk{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+.inp.mini{height:31px;font-size:12.5px;padding:0 8px}
+.inp.mini.num{text-align:right}
 .cia-card{border:1px solid var(--line);border-radius:var(--r);margin-bottom:16px;overflow:hidden;background:var(--surface);box-shadow:0 1px 3px rgba(22,36,56,.06)}
 /* A — tarja na lateral · B — borda inteira na cor · C — cabeçalho tingido */
 .var-a .cia-card{border-left-width:4px;border-left-style:solid}
@@ -1024,6 +1044,7 @@ try { document.documentElement.dataset.tema =
       <button data-view="lanc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5h18M3 12h18M3 19h18"/></svg>Pagamentos</button>
       <button data-view="rec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Recebimentos</button>
       <button data-view="adi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>Lotes e adiantamentos</button>
+      <button data-view="prej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Prejuízos</button>
       <button data-view="est"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 7.5l9-4.5 9 4.5v9L12 21l-9-4.5z"/><path d="M3 7.5l9 4.5 9-4.5M12 12v9"/></svg>Controle de estoque</button>
       <button data-view="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/></svg>Auditoria</button>
       <button data-view="users" id="navUsers" class="hide"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3.4"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M17 11.2a3 3 0 1 0-1.6-5.5M18 20a5.6 5.6 0 0 0-2.2-4.4"/></svg>Usuários</button>
@@ -1180,6 +1201,10 @@ try { document.documentElement.dataset.tema =
         <div id="balMes" class="hz"></div>
         <div class="pl-exp">Compara o que já entrou e saiu de fato com o previsto do mês, e com o mês anterior.</div>
       </div>
+      <div class="panel hide" id="balPrejPainel"><div class="mn-ph"><h3>Prejuízos e prazos de verificação</h3>
+        <button class="btn sm" id="irPrejuizos">Abrir prejuízos</button></div>
+        <div id="balPrej"></div>
+      </div>
       <div class="panel"><h3>Curva de vencimentos dos recebíveis</h3>
         <div id="balVenc"></div>
         <div class="pl-exp">Recebível vencido há 90 dias não é a mesma coisa que vencido ontem. Clique numa faixa para ver os recebimentos dela.</div>
@@ -1295,6 +1320,26 @@ try { document.documentElement.dataset.tema =
     </section>
 
     <!-- ATIVIDADE -->
+    <section class="view hide" id="view-prej">
+      <div class="panel"><h3>Resumo dos prejuízos</h3>
+        <div id="prejResumo" class="hz"></div>
+        <div class="pl-exp">Todo prejuízo registrado aqui é descontado da posição contratual líquida e, por consequência, da posição operacional.</div>
+      </div>
+      <div class="panel"><div class="mn-ph"><h3>Prejuízos — Fraudes</h3>
+        <button class="btn sm primary" id="novaFraude">+ Registrar fraude</button></div>
+        <div id="prejFraudes"></div>
+        <div class="pl-exp">Clique no responsável para abrir as contas dele. As milhas somam das contas automaticamente, ou marque “milhas manuais” para digitar o total.</div>
+      </div>
+      <div class="panel"><h3>Prejuízo — Milhas bloqueadas</h3>
+        <div id="prejBloq"></div>
+        <div class="pl-exp">As milhas migram do estoque para cá quando você as reconhece como perda definitiva — o valor não é contado duas vezes.</div>
+      </div>
+      <div class="panel"><div class="mn-ph"><h3>Outros prejuízos em milhas</h3>
+        <button class="btn sm primary" id="novoOutro">+ Registrar perda</button></div>
+        <div id="prejOutros"></div>
+      </div>
+    </section>
+
     <section class="view hide" id="view-log">
       <div class="panel" style="padding:0">
         <div style="display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)">
@@ -1409,7 +1454,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "26/09/2026 08:55";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "27/09/2026 09:22";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -1467,7 +1512,7 @@ const S = {
   rows: [], rec: [], adi: [], pagadores: [], ops: OPS_BASE.slice(), sel: new Set(), hist: [], log: [], users: [],
   sort: {k:'dataPagamento', dir:1}, sortRec: {k:'dataPrevista', dir:1}, sortAdi: {k:'dataAdiantada', dir:1},
   f: {...FILTROS_PADRAO}, fr: {q:'', pg:'', st:'Previsto', d1:'', d2:''},
-  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '',
+  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '',
   cfg: {autoAplicar: true}, chat: [], alias: {}, avisado: false,
   view: 'bal'
 };
@@ -1677,7 +1722,7 @@ const formataCodigo = n => 'MP-' + String(n).padStart(4, '0');
 function proximoCodigo(){ return Math.max(0, ...S.rows.map(r => numeroDoCodigo(r.codigo))) + 1; }
 
 /** nome da tela onde a alteração aconteceu, para a auditoria não ficar ambígua */
-const TELAS = {lanc:'Pagamentos', rec:'Recebimentos', adi:'Lotes e adiantamentos', lote:'Lotes e adiantamentos',
+const TELAS = {prej:'Prejuízos', lanc:'Pagamentos', rec:'Recebimentos', rec:'Recebimentos', adi:'Lotes e adiantamentos', lote:'Lotes e adiantamentos',
   bal:'Visão geral', estoque:'Estoque de milhas', saldo:'Visão geral', limites:'Visão geral',
   users:'Usuários', import:'Importar', backup:'Backups'};
 const nomeDaTela = k => TELAS[k] || '';
@@ -1721,7 +1766,7 @@ const Local = {
   get(k){ try { const v = localStorage.getItem(k); if (v != null) return v; } catch(e){} return MEM[k] ?? null; },
   set(k,v){ MEM[k] = v; try { localStorage.setItem(k,v); } catch(e){} }
 };
-let fdb = null, fauth = null, unsubRows = null, unsubRec = null, unsubSaldo = null, unsubEstoque = null, unsubLim = null, unsubLotes = null, unsubOps = null, unsubVendas = null, unsubAdi = null, unsubLog = null, unsubUsers = null;
+let fdb = null, fauth = null, unsubRows = null, unsubRec = null, unsubSaldo = null, unsubEstoque = null, unsubLim = null, unsubLotes = null, unsubOps = null, unsubVendas = null, unsubPrej = null, unsubAdi = null, unsubLog = null, unsubUsers = null;
 
 const Repo = {
   async escutar(){
@@ -1751,6 +1796,10 @@ const Repo = {
         S.adi = snap.docs.map(d => normalizeAdi({id:d.id, ...d.data()})); BK.carregado.adi = true;
         if (typeof invalidarCacheIA === 'function') invalidarCacheIA();
         renderAll();
+      }, () => {});
+      unsubPrej && unsubPrej();
+      unsubPrej = fdb.collection('prejuizos').onSnapshot(s => {
+        S.prejuizos = s.docs.map(d => normalizePrejuizo({id:d.id, ...d.data()})); renderAll();
       }, () => {});
       unsubVendas && unsubVendas();
       unsubVendas = fdb.collection('vendas').onSnapshot(s => {
@@ -1800,6 +1849,8 @@ const Repo = {
       catch(e){ S.operacoes = {cores:{}, extras:[]}; }
       try { S.vendas = (JSON.parse(Local.get('tesouraria:vendas') || '[]') || []).map(normalizeVenda); }
       catch(e){ S.vendas = []; }
+      try { S.prejuizos = (JSON.parse(Local.get('tesouraria:prejuizos') || '[]') || []).map(normalizePrejuizo); }
+      catch(e){ S.prejuizos = []; }
       const rawAdi = Local.get('tesouraria:adi');
       S.adi = rawAdi ? JSON.parse(rawAdi).map(normalizeAdi) : [];
       S.log = JSON.parse(Local.get('tesouraria:log') || '[]');
@@ -2119,7 +2170,7 @@ function fillSelects(){
 }
 function renderAll(){
   [['filtros',fillSelects], ['painel',renderDash], ['lançamentos',renderTable], ['recebimentos',renderRec],
-   ['adiantamentos',renderAdi], ['lotes',renderLotes], ['vendas',renderVendas], ['balanço',renderBalanco]].forEach(([nome, fn]) => {
+   ['adiantamentos',renderAdi], ['lotes',renderLotes], ['vendas',renderVendas], ['prejuízos',renderPrejuizos], ['balanço',renderBalanco]].forEach(([nome, fn]) => {
     try { fn(); } catch(e){ mostrarErro(`ao montar ${nome}`, e); }
   });
   if (S.view === 'mensal' || S.view === 'bal') Mensal.render();
@@ -2302,6 +2353,7 @@ $('#balHorizonte').addEventListener('click', e => {
   irParaLanc({st:'Pendente', d1:hoje, d2:ate});
   toast(`Pagamentos previstos até ${fmtDate(ate)}`);
 });
+$('#irPrejuizos').addEventListener('click', () => go('prej'));
 $('#balVenc').addEventListener('click', e => {
   const f = e.target.closest('[data-venc]'); if (!f) return;
   const hoje = getTodaySP(), atras = n => new Date(Date.parse(hoje + 'T12:00:00') - n * 864e5).toISOString().slice(0,10);
@@ -2356,6 +2408,8 @@ $('#view-est').addEventListener('click', async e => {
   }
 });
 $('#balEstoque').addEventListener('click', async e => {
+  const perder = e.target.closest('[data-perder]');
+  if (perder) return migrarBloqueada(perder.dataset.perder);
   if (e.target.closest('#salvarEstoque')){
     if (!podeEditar()) return toast('Seu acesso é somente leitura.');
     if (await gravarEstoque(lerEstoqueDaTela())) toast('Estoque salvo');
@@ -2637,18 +2691,305 @@ function corSugerida(op){
   return PALETA_OP[i];
 }
 
+
+/* =========================================================
+   PREJUÍZOS — fraudes, milhas bloqueadas perdidas e outras perdas
+   Descontam da posição contratual e, por consequência, da operacional.
+   ========================================================= */
+function normalizeConta(c){
+  return {id:c.id || uid(), titular:String(c.titular ?? '').trim(), login:String(c.login ?? '').trim(),
+    senha:String(c.senha ?? ''), milhas:Math.round(parseNum(c.milhas)),
+    companhia:String(c.companhia ?? '').trim().toUpperCase(), obs:String(c.obs ?? '')};
+}
+function normalizePrejuizo(o){
+  const contas = (o.contas || []).map(normalizeConta);
+  const milheiro = Math.round(parseNum(o.milheiro)*100)/100;
+  const somaContas = contas.reduce((s,c) => s + c.milhas, 0);
+  const milhas = o.milhasManual ? Math.round(parseNum(o.milhas)) : (contas.length ? somaContas : Math.round(parseNum(o.milhas)));
+  return {id:o.id || uid(),
+    tipo: ['fraude','bloqueada','outro'].includes(o.tipo) ? o.tipo : 'outro',
+    data: parseDate(o.data) || getTodaySP(),
+    responsavel: String(o.responsavel ?? '').trim(),
+    companhia: String(o.companhia ?? '').trim().toUpperCase(),
+    milhas, milheiro, milhasManual: !!o.milhasManual,
+    valor: o.valor !== undefined && o.valor !== '' && o.valorManual
+      ? Math.round(parseNum(o.valor)*100)/100
+      : fromCents(Math.round(toCents(milheiro) * milhas / 1000)),
+    valorManual: !!o.valorManual,
+    motivo: String(o.motivo ?? ''), obs: String(o.obs ?? ''),
+    prazo: parseDate(o.prazo) || '', resolvido: !!o.resolvido,
+    origemEstoque: String(o.origemEstoque ?? ''),
+    contas, porQuem: String(o.porQuem ?? ''), em: o.em || Date.now()};
+}
+const valorPrejuizo = p => p.valorManual ? p.valor : fromCents(Math.round(toCents(p.milheiro) * p.milhas / 1000));
+const totalPrejuizos = (lista) => fromCents((lista || S.prejuizos).reduce((s,p) => s + toCents(valorPrejuizo(p)), 0));
+
+const Prejuizos = {
+  doMes(ym){ const m = ym || getTodaySP().slice(0,7);
+    return S.prejuizos.filter(p => String(p.data).startsWith(m)); },
+  doAno(ano){ const a = ano || getTodaySP().slice(0,4);
+    return S.prejuizos.filter(p => String(p.data).startsWith(a)); },
+  porTipo(lista){ const t = {fraude:0, bloqueada:0, outro:0};
+    (lista || S.prejuizos).forEach(p => t[p.tipo] = t[p.tipo] + toCents(valorPrejuizo(p)));
+    return {fraude:fromCents(t.fraude), bloqueada:fromCents(t.bloqueada), outro:fromCents(t.outro)}; },
+  /** casos com prazo de verificação ainda em aberto */
+  prazosAbertos(){
+    return S.prejuizos.filter(p => p.prazo && !p.resolvido)
+      .sort((a,b) => String(a.prazo).localeCompare(String(b.prazo)));
+  }
+};
+
+async function gravarPrejuizo(dados, rotulo){
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  const p = normalizePrejuizo({...dados, porQuem: APP.nome || 'Local'});
+  const antes = S.prejuizos.find(x => x.id === p.id);
+  S.prejuizos = antes ? S.prejuizos.map(x => x.id === p.id ? p : x) : [p, ...S.prejuizos];
+  if (APP.modo === 'nuvem'){
+    try { await fdb.collection('prejuizos').doc(p.id).set(p); }
+    catch(e){ return toast('Não consegui gravar: ' + (e.code || e.message)); }
+  } else Local.set('tesouraria:prejuizos', JSON.stringify(S.prejuizos));
+  await Repo.registrar({ts:Date.now(), uid:APP.uid || 'local', nome:APP.nome || 'Local', origem:'manual',
+    label: rotulo || (antes ? 'prejuízo atualizado' : 'prejuízo registrado'), tela:'prej',
+    resumo:[`${TIPO_PREJ[p.tipo]} · ${p.responsavel || p.companhia || '—'} · ${brl(valorPrejuizo(p))}${p.milhas ? ' · ' + p.milhas.toLocaleString('pt-BR') + ' milhas' : ''}`], total:1});
+  renderAll();
+  return p;
+}
+async function apagarPrejuizo(id){
+  const p = S.prejuizos.find(x => x.id === id); if (!p) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  if (!confirm(`Apagar este prejuízo de ${brl(valorPrejuizo(p))}?\n\nA posição volta ao valor anterior.`)) return;
+  S.prejuizos = S.prejuizos.filter(x => x.id !== id);
+  if (APP.modo === 'nuvem'){ try { await fdb.collection('prejuizos').doc(id).delete(); } catch(e){ return toast('Não consegui apagar: ' + e.code); } }
+  else Local.set('tesouraria:prejuizos', JSON.stringify(S.prejuizos));
+  await Repo.registrar({ts:Date.now(), uid:APP.uid || 'local', nome:APP.nome || 'Local', origem:'manual',
+    label:'prejuízo apagado', tela:'prej', resumo:[`${TIPO_PREJ[p.tipo]} · ${brl(valorPrejuizo(p))}`], total:1});
+  renderAll();
+  toast('Prejuízo apagado');
+}
+const TIPO_PREJ = {fraude:'Fraude', bloqueada:'Milhas bloqueadas perdidas', outro:'Outro prejuízo em milhas'};
+
+/** a linha bloqueada sai do estoque e vira prejuízo, sem contar duas vezes */
+async function migrarBloqueada(itemId){
+  const item = ((S.estoque && S.estoque.itens) || []).find(i => i.id === itemId);
+  if (!item) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  const valor = fromCents(Math.round(toCents(item.media) * (Number(item.saldo)||0) / 1000));
+  if (!confirm(`Marcar como perdidas as ${Number(item.saldo||0).toLocaleString('pt-BR')} milhas bloqueadas da ${item.companhia}?\n\n`
+    + `Elas saem do estoque e passam a contar como prejuízo de ${brl(valor)}, descontado da posição.`)) return;
+  await gravarPrejuizo({tipo:'bloqueada', data:getTodaySP(), companhia:item.companhia,
+    milhas:item.saldo, milheiro:item.media, origemEstoque:item.id,
+    motivo:`${item.tipo} — reconhecida como perda definitiva`}, 'milhas bloqueadas reconhecidas como perda');
+  const itens = ((S.estoque && S.estoque.itens) || []).filter(i => i.id !== itemId);
+  await gravarEstoque(itens);
+  toast('Milhas migradas para prejuízo');
+}
+
+/* ---------- tela de prejuízos ---------- */
+function renderPrejuizos(){
+  if (!$('#prejFraudes')) return;
+  const mes = Prejuizos.doMes(), ano = Prejuizos.doAno();
+  const tMes = Prejuizos.porTipo(mes), tAno = Prejuizos.porTipo(ano);
+  const somaMes = totalPrejuizos(mes), somaAno = totalPrejuizos(ano);
+
+  $('#prejResumo').innerHTML = `
+    <div class="hz-bloco"><div class="hz-tit">Prejuízo no mês</div>
+      <div class="hz-val bl-neg">${brl(somaMes)}</div>
+      <div class="hz-lin"><span>Fraudes</span><b>${brl(tMes.fraude)}</b></div>
+      <div class="hz-lin"><span>Milhas bloqueadas</span><b>${brl(tMes.bloqueada)}</b></div>
+      <div class="hz-lin"><span>Outras perdas</span><b>${brl(tMes.outro)}</b></div>
+      <div class="hz-nota">${mes.length} registro(s) em ${mesLongo(getTodaySP().slice(0,7))}</div></div>
+    <div class="hz-bloco"><div class="hz-tit">Prejuízo no ano</div>
+      <div class="hz-val bl-neg">${brl(somaAno)}</div>
+      <div class="hz-lin"><span>Fraudes</span><b>${brl(tAno.fraude)}</b></div>
+      <div class="hz-lin"><span>Milhas bloqueadas</span><b>${brl(tAno.bloqueada)}</b></div>
+      <div class="hz-lin"><span>Outras perdas</span><b>${brl(tAno.outro)}</b></div>
+      <div class="hz-nota">${ano.length} registro(s) em ${getTodaySP().slice(0,4)}</div></div>
+    <div class="hz-bloco ${Prejuizos.prazosAbertos().length ? 'ruim' : ''}"><div class="hz-tit">Casos em verificação</div>
+      <div class="hz-val">${Prejuizos.prazosAbertos().length}</div>
+      ${Prejuizos.prazosAbertos().slice(0,3).map(p => {
+        const atrasado = p.prazo < getTodaySP();
+        return `<div class="hz-lin"><span>${esc(p.responsavel || p.companhia || TIPO_PREJ[p.tipo])}</span>
+          <b class="${atrasado ? 'bl-neg' : ''}">${fmtDate(p.prazo)}</b></div>`;
+      }).join('')}
+      <div class="hz-nota">prazos de verificação em aberto</div></div>`;
+
+  /* ----- fraudes ----- */
+  const fraudes = S.prejuizos.filter(p => p.tipo === 'fraude')
+    .sort((a,b) => String(b.data).localeCompare(String(a.data)));
+  $('#prejFraudes').innerHTML = fraudes.length ? fraudes.map(p => {
+    const aberto = S.prejAberto === p.id;
+    const soma = p.contas.reduce((s,c) => s + c.milhas, 0);
+    return `<div class="fr ${aberto ? 'on' : ''}" data-fr="${p.id}">
+      <div class="fr-cab" data-abrirfr="${p.id}">
+        <div class="fr-nome"><b>${esc(p.responsavel || '(sem responsável)')}</b>
+          <span>${fmtDate(p.data)} · ${p.contas.length} conta(s)${p.companhia ? ' · ' + esc(p.companhia) : ''}</span></div>
+        <div class="fr-col"><i>Milhas perdidas</i><b>${p.milhas.toLocaleString('pt-BR')}</b></div>
+        <div class="fr-col"><i>Milheiro</i><b>${brl(p.milheiro)}</b></div>
+        <div class="fr-col"><i>Prejuízo</i><b class="bl-neg">${brl(valorPrejuizo(p))}</b></div>
+        <div class="fr-col"><i>Verificar até</i><b class="${p.prazo && p.prazo < getTodaySP() && !p.resolvido ? 'bl-neg' : ''}">${p.prazo ? fmtDate(p.prazo) : '—'}</b></div>
+        <button class="btn sm ghost" data-obs="${p.id}" title="Observações e medidas">✎ ${p.obs ? '•' : ''}</button>
+      </div>
+      ${aberto ? `
+      <div class="fr-corpo">
+        <div class="vf">
+          <div class="field"><label>Responsável pela conta</label><input class="inp" data-pcampo="responsavel" data-pid="${p.id}" value="${esc(p.responsavel)}"></div>
+          <div class="field"><label>Data</label><input class="inp" type="date" data-pcampo="data" data-pid="${p.id}" value="${p.data}"></div>
+          <div class="field"><label>Companhia</label><input class="inp" data-pcampo="companhia" data-pid="${p.id}" value="${esc(p.companhia)}"></div>
+          <div class="field"><label>Milheiro</label><input class="inp" data-pcampo="milheiro" data-pid="${p.id}" value="${p.milheiro ? p.milheiro.toFixed(2).replace('.',',') : ''}"></div>
+          <div class="field"><label>Milhas perdidas ${p.milhasManual ? '(manual)' : '(somadas das contas)'}</label>
+            <input class="inp" data-pcampo="milhas" data-pid="${p.id}" value="${p.milhas ? p.milhas.toLocaleString('pt-BR') : ''}" ${p.milhasManual ? '' : 'disabled'}></div>
+          <div class="field"><label>Prazo de verificação</label><input class="inp" type="date" data-pcampo="prazo" data-pid="${p.id}" value="${p.prazo}"></div>
+          <div class="vf-bts">
+            <label class="chk"><input type="checkbox" data-pcampo="milhasManual" data-pid="${p.id}" ${p.milhasManual ? 'checked' : ''}> milhas manuais</label>
+            <label class="chk"><input type="checkbox" data-pcampo="resolvido" data-pid="${p.id}" ${p.resolvido ? 'checked' : ''}> caso resolvido</label>
+          </div>
+        </div>
+        ${!p.milhasManual && soma !== p.milhas ? `<div class="vf-prev">Somadas das contas: ${soma.toLocaleString('pt-BR')} milhas</div>` : ''}
+
+        <div class="fr-contas">
+          <div class="sub-cab"><b>Contas fraudadas</b>
+            <button class="btn sm primary" data-addconta="${p.id}">+ Acrescentar conta</button></div>
+          ${p.contas.length ? `<table class="pl-tab">
+            <thead><tr><th>Titular</th><th>Login</th><th>Senha</th><th class="num">Milhas</th><th>Companhia</th><th></th></tr></thead>
+            <tbody>${p.contas.map(c => `<tr>
+              <td><input class="inp mini" data-ccampo="titular" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.titular)}"></td>
+              <td><input class="inp mini" data-ccampo="login" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.login)}"></td>
+              <td><input class="inp mini" type="password" data-ccampo="senha" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.senha)}" placeholder="••••••"></td>
+              <td><input class="inp mini num" data-ccampo="milhas" data-pid="${p.id}" data-cid="${c.id}" value="${c.milhas ? c.milhas.toLocaleString('pt-BR') : ''}"></td>
+              <td><input class="inp mini" data-ccampo="companhia" data-pid="${p.id}" data-cid="${c.id}" value="${esc(c.companhia)}"></td>
+              <td style="white-space:nowrap">
+                <button class="lixo" data-obsc="${p.id}|${c.id}" title="Observações desta conta">✎ ${c.obs ? '•' : ''}</button>
+                <button class="lixo" data-delconta="${p.id}|${c.id}" title="Remover conta">✕</button></td></tr>`).join('')}</tbody>
+            <tfoot><tr><td colspan="3">${p.contas.length} conta(s)</td><td class="num">${soma.toLocaleString('pt-BR')}</td><td colspan="2"></td></tr></tfoot>
+          </table>` : '<div class="empty">Nenhuma conta registrada. Use o botão acima.</div>'}
+        </div>
+        ${p.obs ? `<div class="obs-box"><b>Observações e medidas</b><div>${esc(p.obs).replace(/\n/g,'<br>')}</div></div>` : ''}
+        <div style="margin-top:12px"><button class="btn sm ghost" data-delprej="${p.id}">Apagar este caso</button></div>
+      </div>` : ''}
+    </div>`;
+  }).join('') : '<div class="empty">Nenhuma fraude registrada.</div>';
+
+  /* ----- milhas bloqueadas perdidas ----- */
+  const bloq = S.prejuizos.filter(p => p.tipo === 'bloqueada').sort((a,b) => String(b.data).localeCompare(String(a.data)));
+  $('#prejBloq').innerHTML = bloq.length ? `<table class="pl-tab">
+    <thead><tr><th>Data</th><th>Companhia</th><th class="num">Milhas</th><th class="num">Milheiro</th><th class="num">Prejuízo</th><th>Motivo</th><th></th></tr></thead>
+    <tbody>${bloq.map(p => `<tr>
+      <td><input class="inp mini" type="date" data-pcampo="data" data-pid="${p.id}" value="${p.data}"></td>
+      <td><input class="inp mini" data-pcampo="companhia" data-pid="${p.id}" value="${esc(p.companhia)}"></td>
+      <td><input class="inp mini num" data-pcampo="milhas" data-pid="${p.id}" value="${p.milhas.toLocaleString('pt-BR')}"></td>
+      <td><input class="inp mini num" data-pcampo="milheiro" data-pid="${p.id}" value="${p.milheiro.toFixed(2).replace('.',',')}"></td>
+      <td class="num forte bl-neg">${brl(valorPrejuizo(p))}</td>
+      <td>${esc(p.motivo || '—')}</td>
+      <td style="white-space:nowrap"><button class="lixo" data-obs="${p.id}" title="Observações">✎ ${p.obs ? '•' : ''}</button>
+        <button class="lixo" data-delprej="${p.id}" title="Apagar">✕</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="4">${bloq.length} registro(s)</td><td class="num bl-neg">${brl(totalPrejuizos(bloq))}</td><td colspan="2"></td></tr></tfoot>
+  </table>` : '<div class="empty">Nenhuma milha bloqueada reconhecida como perda. Em Controle de estoque, use “marcar como perdida” numa linha bloqueada.</div>';
+
+  /* ----- outros prejuízos ----- */
+  const outros = S.prejuizos.filter(p => p.tipo === 'outro').sort((a,b) => String(b.data).localeCompare(String(a.data)));
+  $('#prejOutros').innerHTML = outros.length ? `<table class="pl-tab">
+    <thead><tr><th>Data</th><th>Companhia</th><th class="num">Milhas</th><th class="num">Milheiro</th><th class="num">Prejuízo</th><th>Motivo</th><th></th></tr></thead>
+    <tbody>${outros.map(p => `<tr>
+      <td><input class="inp mini" type="date" data-pcampo="data" data-pid="${p.id}" value="${p.data}"></td>
+      <td><input class="inp mini" data-pcampo="companhia" data-pid="${p.id}" value="${esc(p.companhia)}"></td>
+      <td><input class="inp mini num" data-pcampo="milhas" data-pid="${p.id}" value="${p.milhas ? p.milhas.toLocaleString('pt-BR') : ''}"></td>
+      <td><input class="inp mini num" data-pcampo="milheiro" data-pid="${p.id}" value="${p.milheiro ? p.milheiro.toFixed(2).replace('.',',') : ''}"></td>
+      <td class="num forte bl-neg">${brl(valorPrejuizo(p))}</td>
+      <td><input class="inp mini" data-pcampo="motivo" data-pid="${p.id}" value="${esc(p.motivo)}" placeholder="o que aconteceu"></td>
+      <td style="white-space:nowrap"><button class="lixo" data-obs="${p.id}" title="Observações">✎ ${p.obs ? '•' : ''}</button>
+        <button class="lixo" data-delprej="${p.id}" title="Apagar">✕</button></td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="4">${outros.length} registro(s)</td><td class="num bl-neg">${brl(totalPrejuizos(outros))}</td><td colspan="2"></td></tr></tfoot>
+  </table>` : '<div class="empty">Nenhum outro prejuízo registrado.</div>';
+}
+
+/** caixa de observações e medidas tomadas */
+function caixaObs(titulo, texto, aoSalvar){
+  const m = modal(titulo, `
+    <div class="field"><label>Observações e medidas tomadas</label>
+      <textarea class="inp" id="obsTxt" rows="8" placeholder="o que aconteceu, o que já foi feito, com quem falou, o que falta">${esc(texto || '')}</textarea></div>`,
+    `<button class="btn" data-close>Cancelar</button><button class="btn primary" id="obsOk">Salvar</button>`);
+  m.querySelector('#obsOk').addEventListener('click', async () => {
+    const t = m.querySelector('#obsTxt').value;
+    m.remove();
+    await aoSalvar(t);
+  });
+  setTimeout(() => { const t = m.querySelector('#obsTxt'); if (t) t.focus(); }, 50);
+}
+
+$('#view-prej').addEventListener('click', async e => {
+  const abrir = e.target.closest('[data-abrirfr]');
+  if (abrir && !e.target.closest('[data-obs]')){
+    S.prejAberto = S.prejAberto === abrir.dataset.abrirfr ? '' : abrir.dataset.abrirfr;
+    return renderPrejuizos();
+  }
+  const obs = e.target.closest('[data-obs]');
+  if (obs){
+    const p = S.prejuizos.find(x => x.id === obs.dataset.obs); if (!p) return;
+    return caixaObs(`Observações · ${esc(p.responsavel || p.companhia || TIPO_PREJ[p.tipo])}`, p.obs,
+      txt => gravarPrejuizo({...p, obs:txt}, 'observações do prejuízo'));
+  }
+  const obsc = e.target.closest('[data-obsc]');
+  if (obsc){
+    const [pid, cid] = obsc.dataset.obsc.split('|');
+    const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
+    const c = p.contas.find(x => x.id === cid); if (!c) return;
+    return caixaObs(`Observações · conta ${esc(c.titular || c.login || '')}`, c.obs,
+      txt => gravarPrejuizo({...p, contas: p.contas.map(x => x.id === cid ? {...x, obs:txt} : x)}, 'observações da conta fraudada'));
+  }
+  const add = e.target.closest('[data-addconta]');
+  if (add){
+    const p = S.prejuizos.find(x => x.id === add.dataset.addconta); if (!p) return;
+    await gravarPrejuizo({...p, contas:[...p.contas, {id:uid(), titular:'', login:'', senha:'', milhas:0, companhia:p.companhia, obs:''}]}, 'conta acrescentada ao caso');
+    return;
+  }
+  const del = e.target.closest('[data-delconta]');
+  if (del){
+    const [pid, cid] = del.dataset.delconta.split('|');
+    const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
+    if (!confirm('Remover esta conta do caso?')) return;
+    return gravarPrejuizo({...p, contas: p.contas.filter(x => x.id !== cid)}, 'conta removida do caso');
+  }
+  const delp = e.target.closest('[data-delprej]');
+  if (delp) return apagarPrejuizo(delp.dataset.delprej);
+});
+/* edição dos campos do prejuízo e das contas */
+$('#view-prej').addEventListener('change', async e => {
+  const el = e.target;
+  const pid = el.dataset.pid; if (!pid) return;
+  const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
+  if (el.dataset.pcampo){
+    const k = el.dataset.pcampo;
+    const v = el.type === 'checkbox' ? el.checked
+            : ['milhas'].includes(k) ? Math.round(parseNum(el.value))
+            : ['milheiro'].includes(k) ? parseNum(el.value) : el.value;
+    return gravarPrejuizo({...p, [k]: v}, 'prejuízo atualizado');
+  }
+  if (el.dataset.ccampo){
+    const cid = el.dataset.cid, k = el.dataset.ccampo;
+    const v = k === 'milhas' ? Math.round(parseNum(el.value)) : el.value;
+    return gravarPrejuizo({...p, contas: p.contas.map(c => c.id === cid ? {...c, [k]: v} : c)}, 'conta fraudada atualizada');
+  }
+});
+$('#novaFraude').addEventListener('click', async () => {
+  const p = await gravarPrejuizo({tipo:'fraude', data:getTodaySP(), responsavel:'', milheiro:0,
+    contas:[{id:uid(), titular:'', login:'', senha:'', milhas:0, companhia:'', obs:''}]}, 'fraude registrada');
+  if (p){ S.prejAberto = p.id; renderPrejuizos(); }
+});
+$('#novoOutro').addEventListener('click', () => gravarPrejuizo({tipo:'outro', data:getTodaySP(), milheiro:0, milhas:0, motivo:''}, 'perda registrada'));
+
 /* ---------- navegação ---------- */
 function go(v){
   S.view = v;
   $$('#nav button[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
   // o Painel deixou de ser uma tela própria: ele é a segunda metade do Controle mensal
-  ['bal','mensal','lanc','rec','adi','est','log','users','bkp'].forEach(x => $('#view-'+x).classList.toggle('hide', x !== v));
+  ['bal','mensal','lanc','rec','adi','est','prej','log','users','bkp'].forEach(x => $('#view-'+x).classList.toggle('hide', x !== v));
   const t = {dash:['Controle mensal','Entradas e saídas do mês, com o painel consolidado'],
              mensal:['Fluxo de caixa','Movimento do mês e projeção diária — valores previstos, não realizados'],
              lanc:['Pagamentos','Contas a pagar — edite na grade, filtre e trabalhe em lote'],
              adi:['Lotes e adiantamentos','Lotes gerados e fila de pagamentos antecipados'],
              bal:['Visão geral','Posição contratual, estoque e projeção — não representa saldo bancário'],
              rec:['Recebimentos','Contas a receber — previsões e entradas confirmadas, por pagador'],
+             prej:['Prejuízos','Fraudes, milhas perdidas e prazos de verificação'],
              est:['Controle de estoque','Saldo por companhia, milhas bloqueadas e vendas'],
              log:['Auditoria','Quem alterou o quê, e quando'],
              users:['Usuários','Controle de acesso da equipe'],
@@ -5391,7 +5732,7 @@ const Balanco = {
 };
 
 function renderBalanco(){
-  if (S.view !== 'bal' && S.view !== 'est') return;   // o estoque mora em outra tela, mas usa os mesmos cálculos
+  if (!['bal','est','prej'].includes(S.view)) return;   // o estoque mora em outra tela, mas usa os mesmos cálculos
   if (!$('#balCaixa')) return;
   renderPainelPlanilha();
   const s = saldoBase(), caixa = Balanco.caixaHoje(), ab = Balanco.aberto();
@@ -5468,6 +5809,33 @@ function renderBalanco(){
       <div class="hz-lin"><span>Previsto para o mês</span><b>${brl(mesAtual.liquidoPrev)}</b></div>
       <div class="hz-nota">realizado até hoje · ${mesLongo(mesAtual.mes)}</div>${seta(mesAtual.liquidoReal, mesAnt.liquidoReal)}</div>`;
 
+  const prejMes = Prejuizos.doMes(), prejAno = Prejuizos.doAno(), prazos = Prejuizos.prazosAbertos();
+  $('#balPrejPainel').classList.toggle('hide', !S.prejuizos.length);
+  if (S.prejuizos.length){
+    const tp = Prejuizos.porTipo(prejAno);
+    $('#balPrej').innerHTML = `
+      <div class="hz">
+        <div class="hz-bloco"><div class="hz-tit">Prejuízo no mês</div><div class="hz-val bl-neg">${brl(totalPrejuizos(prejMes))}</div>
+          <div class="hz-nota">${prejMes.length} registro(s) em ${mesLongo(getTodaySP().slice(0,7))}</div></div>
+        <div class="hz-bloco"><div class="hz-tit">Prejuízo no ano</div><div class="hz-val bl-neg">${brl(totalPrejuizos(prejAno))}</div>
+          <div class="hz-lin"><span>Fraudes</span><b>${brl(tp.fraude)}</b></div>
+          <div class="hz-lin"><span>Milhas bloqueadas</span><b>${brl(tp.bloqueada)}</b></div>
+          <div class="hz-lin"><span>Outras perdas</span><b>${brl(tp.outro)}</b></div></div>
+        <div class="hz-bloco ${prazos.some(p => p.prazo < getTodaySP()) ? 'ruim' : ''}">
+          <div class="hz-tit">Casos a verificar</div><div class="hz-val">${prazos.length}</div>
+          <div class="hz-nota">prazos de verificação em aberto</div></div>
+      </div>
+      ${prazos.length ? `<table class="pl-tab" style="margin-top:12px">
+        <thead><tr><th>Caso</th><th>Tipo</th><th class="num">Prejuízo</th><th>Verificar até</th><th>Situação</th></tr></thead>
+        <tbody>${prazos.map(p => {
+          const dias = Math.round((Date.parse(p.prazo) - Date.parse(getTodaySP())) / 864e5);
+          return `<tr><td><b>${esc(p.responsavel || p.companhia || '—')}</b></td>
+            <td>${TIPO_PREJ[p.tipo]}</td>
+            <td class="num forte bl-neg">${brl(valorPrejuizo(p))}</td>
+            <td>${fmtDate(p.prazo)}</td>
+            <td class="${dias < 0 ? 'bl-neg' : dias <= 7 ? 'bl-alerta' : ''}">${dias < 0 ? `vencido há ${-dias} dia(s)` : dias === 0 ? 'vence hoje' : `faltam ${dias} dia(s)`}</td></tr>`;
+        }).join('')}</tbody></table>` : ''}`;
+  }
   const curva = MotorFinanceiroMP.curvaVencimentos();
   const totalCurva = fromCents(curva.reduce((s,f) => s + toCents(f.valor), 0));
   const vencido = fromCents(curva.slice(1).reduce((s,f) => s + toCents(f.valor), 0));
@@ -5555,7 +5923,8 @@ async function gravarEstoque(itens){
 Object.assign(Balanco, {
   entradasFuturas(){ return fromCents(S.rec.filter(ABERTO_REC).reduce((s,r) => s + toCents(r.valor), 0)); },
   saidasFuturas(){ return fromCents(S.rows.filter(ABERTO).reduce((s,r) => s + toCents(r.valor), 0)); },
-  lucroPrevisto(){ return subtractMoney(this.entradasFuturas(), this.saidasFuturas()); },
+  prejuizos(){ return totalPrejuizos(); },
+  lucroPrevisto(){ return subtractMoney(subtractMoney(this.entradasFuturas(), this.saidasFuturas()), this.prejuizos()); },
   estoque(){
     const itens = estoqueBase().itens || [];
     const soma = f => fromCents(itens.filter(f).reduce((s,i) => s + toCents(totalItem(i)), 0));
@@ -5605,6 +5974,7 @@ function renderPainelPlanilha(){
       <div class="pl-tit">Posição contratual</div>
       <div class="pl-lin"><span>Recebimentos previstos</span><b class="pl-e">${brl(entradas)}</b></div>
       <div class="pl-lin"><span>Pagamentos previstos</span><b class="pl-s">${brl(saidas)}</b></div>
+      ${toCents(Balanco.prejuizos()) ? `<div class="pl-lin"><span>Prejuízos registrados</span><b class="pl-s">${brl(Balanco.prejuizos())}</b></div>` : ''}
       <div class="pl-lin destaque"><span>Posição contratual líquida</span><b class="${lucro < 0 ? 'bl-neg' : 'bl-pos'}">${brl(lucro)}</b></div>
       <div class="pl-exp">Contas a receber previstas menos contas a pagar previstas. Não é caixa, lucro nem patrimônio.</div>
     </div>
@@ -5688,7 +6058,9 @@ function renderPainelPlanilha(){
         <div class="pl-tit" style="color:var(--bad)">Ativos sob restrição — não compõem o estoque disponível</div>
         ${restritos.map(i => `<div class="rest-item rc-${esc(String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase())}" data-est="${i.id}">
           <div class="rest-cab"><b class="comp comp-${esc(String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase())}">${esc(i.companhia)}</b>
-            <span>${esc(i.tipo)}</span><button class="lixo" data-remest="${i.id}" title="Remover">✕</button></div>
+            <span>${esc(i.tipo)}</span>
+            <button class="btn sm ghost" data-perder="${i.id}" title="Reconhecer como perda definitiva">Marcar como perdida</button>
+            <button class="lixo" data-remest="${i.id}" title="Remover">✕</button></div>
           <div class="rest-grade">
             <label>Milhas<input class="inp mini" data-campo="saldo" value="${i.saldo ? Number(i.saldo).toLocaleString('pt-BR') : ''}" placeholder="0"></label>
             <label>Valor nominal por milheiro<input class="inp mini" data-campo="media" value="${i.media ? i.media.toFixed(2).replace('.',',') : ''}" placeholder="0,00"></label>
