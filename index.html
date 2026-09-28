@@ -860,7 +860,7 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 .bl-saldo .field{width:190px}
 .bl-info{color:var(--muted-2);font-size:12px;padding-bottom:9px}
 .bl-nota{color:var(--muted-2);font-size:12.5px;margin:12px 0 0}
-.bl-linha{display:grid;grid-template-columns:132px minmax(90px,1fr) 150px 150px 150px 160px;gap:12px;align-items:center;
+.bl-linha{display:grid;grid-template-columns:132px minmax(90px,1fr) 165px 165px 175px;gap:12px;align-items:center;
   padding:7px 8px;border-radius:var(--rs);font-size:13px;font-variant-numeric:tabular-nums;cursor:pointer}
 .bl-linha:hover{background:var(--surface-2)}
 .bl-linha.neg{background:var(--bad-dim)}
@@ -943,7 +943,7 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 #view-mensal .mn-t tfoot td{font-weight:800;border-top:1px solid var(--line);border-bottom:none}
 #view-mensal .mn-scroll{overflow-x:auto}
 
-#view-mensal .mn-fx{display:grid;grid-template-columns:92px minmax(90px,1fr) 136px 136px 140px 150px;gap:12px;align-items:center;padding:6px 8px;border-radius:6px}
+#view-mensal .mn-fx{display:grid;grid-template-columns:92px minmax(90px,1fr) 150px 150px 160px;gap:12px;align-items:center;padding:6px 8px;border-radius:6px}
 #view-mensal .mn-fx > div,#view-mensal .mn-fx > span{white-space:nowrap}
 #view-mensal .mn-fxh{color:var(--muted-2);font-size:11.5px;font-weight:800;padding-bottom:6px;border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px}
 #view-mensal .mn-fxh span:nth-child(n+3){text-align:right}
@@ -1473,7 +1473,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "27/09/2026 10:31";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "28/09/2026 09:49";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2098,7 +2098,7 @@ function renderDash(){
   const dias = MotorFinanceiroMP.caixaPorDia().filter(x => x.data >= hojeSP).slice(0,12);
   const maxDia = Math.max(1, ...dias.map(x => Math.max(x.receber, x.pagar)));
   if (existe('caixaDias')) $('#caixaDias').innerHTML = dias.length
-    ? `<div class="cx cxh"><span>Dia</span><span></span><span>Recebimentos</span><span>Pagamentos</span><span>Fluxo do dia</span><span>Acumulado</span></div>`
+    ? `<div class="cx cxh"><span>Dia</span><span></span><span>Recebimentos</span><span>Pagamentos</span><span>Fluxo do dia</span></div>`
       + `<div class="caixa">` + dias.map(x => `
       <div class="cx ${x.saldo < 0 && x.pagar > 0 ? 'neg' : ''}" data-dia="${x.data}" title="Ver os lançamentos de ${fmtDate(x.data)}">
         <div class="cxd">${fmtDate(x.data)}</div>
@@ -5858,7 +5858,7 @@ function renderBalanco(){
 
   $('#balAlerta').innerHTML = neg
     ? `<div class="alert" data-mesneg="${neg.ym}"><div><b>O caixa fica negativo em ${mesLongo(neg.ym)}</b>
-         <span>faltam ${brl(Math.abs(neg.acumulado))} para cobrir o que está previsto até lá — clique para abrir o mês</span></div></div>`
+         <span>as saídas previstas superam as entradas até lá — clique para abrir o mês</span></div></div>`
     : (projecao.length ? '<div class="empty">O caixa se mantém positivo em todos os meses projetados.</div>' : '');
 
   const carimbo = $('#balAtualizado');
@@ -5982,15 +5982,14 @@ function renderBalanco(){
 
   const maior = Math.max(1, ...projecao.map(x => Math.max(toCents(x.entradas), toCents(x.saidas))));
   $('#balProj').innerHTML = projecao.length ? `
-    <div class="bl-linha bl-cab"><span>Mês</span><span></span><span>Entradas</span><span>Saídas</span><span>Resultado</span><span>Saldo acumulado</span></div>`
+    <div class="bl-linha bl-cab"><span>Mês</span><span></span><span>Entradas</span><span>Saídas</span><span>Resultado</span></div>`
     + projecao.map(x => `
-      <div class="bl-linha ${x.acumulado < 0 ? 'neg' : ''}" data-mes="${x.ym}" title="Abrir ${mesLongo(x.ym)} no controle mensal">
+      <div class="bl-linha ${x.resultado < 0 ? 'neg' : ''}" data-mes="${x.ym}" title="Abrir ${mesLongo(x.ym)} no controle mensal">
         <span class="bl-mes">${mesLongo(x.ym)}</span>
         <span class="bl-barras"><i class="e" style="width:${(toCents(x.entradas)/maior*100).toFixed(1)}%"></i><i class="s" style="width:${(toCents(x.saidas)/maior*100).toFixed(1)}%"></i></span>
         <span class="bl-e">${brl(x.entradas)}</span>
         <span class="bl-s">${brl(x.saidas)}</span>
         <span class="${x.resultado < 0 ? 'bl-neg' : 'bl-pos'}">${x.resultado > 0 ? '+' : ''}${brl(x.resultado)}</span>
-        <span class="bl-acum ${x.acumulado < 0 ? 'bl-neg' : ''}">${brl(x.acumulado)}</span>
       </div>`).join('')
     : '<div class="empty">Nenhum lançamento ou recebimento com data a partir do saldo informado.</div>';
 }
@@ -7016,7 +7015,6 @@ const Mensal = (() => {
         <div class="lab">Fluxo líquido do mês (entradas − saídas)</div>
         <div class="big ${R.resultado < 0 ? 'mn-neg' : 'mn-pos'}">${sinal(R.resultado)}</div>
         <div class="mn-lin"><span>Realizado até agora</span><b class="${R.resultadoReal < 0 ? 'mn-neg' : 'mn-pos'}">${sinal(R.resultadoReal)}</b></div>
-        <div class="mn-lin"><span>Caixa acumulado até ${MES_CURTO[mes-1]}</span><b class="${acum < 0 ? 'mn-neg' : 'mn-pos'}">${sinal(acum)}</b></div>
         <div class="mn-lin"><span>Resultado de ${antCurto}/${String(pm[0]).slice(2)}</span><b>${sinal(P.resultado)} ${compara(R.resultado, P.resultado)}</b></div>
         ${R.reinv ? `<div class="mn-lin"><span>Reinvestido, fora do caixa (${R.nReinv})</span><b>${brlC(R.reinv)}</b></div>` : ''}
       </div>`;
@@ -7028,7 +7026,7 @@ const Mensal = (() => {
     el('pnlFluxo').classList.toggle('alerta', negs.length > 0);
     el('fluxoNota').textContent = fx.length ? `${fx.length} dias com movimento` + (negs.length ? ` · ${negs.length} com saída maior que a entrada` : '') : '';
     el('fluxo').innerHTML = fx.length ? `
-      <div class="mn-fx mn-fxh"><span>Dia</span><span></span><span>Entra</span><span>Sai</span><span>Fluxo do dia</span><span>Saldo acumulado projetado</span></div>
+      <div class="mn-fx mn-fxh"><span>Dia</span><span></span><span>Entra</span><span>Sai</span><span>Fluxo do dia</span></div>
       <div class="mn-fxs">${fx.map(x => `
         <div class="mn-fx ${x.saldo < 0 && x.s > 0 ? 'neg' : ''} ${x.data === h ? 'hoje' : ''} ${x.data > h ? 'fut' : ''}" data-dia="${x.data}" title="Ver os lançamentos de ${fmtDate(x.data)}" style="cursor:pointer">
           <div class="d"><b>${x.data.slice(8)}/${x.data.slice(5,7)}</b><small>${diaSemana(x.data)}</small></div>
@@ -7036,9 +7034,8 @@ const Mensal = (() => {
           <div class="v ${x.e ? 'mn-e' : 'mn-mut'} ${x.e && x.eReal < x.e ? 'mn-prev' : ''}">${brlC(x.e)}</div>
           <div class="v ${x.s ? 'mn-s' : 'mn-mut'} ${x.s && x.sReal < x.s ? 'mn-prev' : ''}">${brlC(x.s)}</div>
           <div class="v saldo ${x.saldo < 0 ? 'mn-neg' : 'mn-pos'}"><b>${sinal(x.saldo)}</b></div>
-          <div class="v acum ${x.acum < 0 ? 'mn-neg' : ''}">${brlC(x.acum)}</div>
         </div>`).join('')}</div>
-      <div class="mn-nota">Valores em itálico ainda incluem previsões não confirmadas. O saldo acumulado parte do caixa informado e dos meses anteriores — um dia negativo só preocupa quando o acumulado fica negativo. Clique no dia para ver os lançamentos.</div>`
+      <div class="mn-nota">Valores em itálico ainda incluem previsões não confirmadas. Clique no dia para ver os lançamentos.</div>`
       : '<div class="empty">Nenhuma entrada ou saída com data neste mês.</div>';
 
     el('porOp').innerHTML = rank(agrupar(R.sai.filter(NO_CAIXA), r => r.operacao || '(sem operação)', r => toC(r.valor), r => r.status === 'Pago'), 's', 10);
@@ -7156,7 +7153,7 @@ const Mensal = (() => {
     </svg>`;
     const T = ms.reduce((t,R) => ({e:t.e + R.entradas, s:t.s + R.saidas, r:t.r + R.resultado, p:t.p + R.pago}), {e:0,s:0,r:0,p:0});
     el('tabAno').innerHTML = `
-      <thead><tr><th>Mês</th><th class="n">Entradas</th><th class="n">Saídas</th><th class="n">Resultado</th><th class="n">Acumulado</th><th class="n" title="Quanto das saídas já foi pago">Pago</th></tr></thead>
+      <thead><tr><th>Mês</th><th class="n">Entradas</th><th class="n">Saídas</th><th class="n">Resultado</th><th class="n" title="Quanto das saídas já foi pago">Pago</th></tr></thead>
       <tbody>${ms.map((R,i) => `<tr class="click ${i+1 === mes ? 'sel' : ''}" data-m="${i+1}">
         <td><b>${cap(MESES[i]).slice(0,3)}</b></td>
         <td class="n mn-e">${R.entradas ? curtoC(R.entradas) : '<span class="mn-mut">—</span>'}</td>
@@ -7179,15 +7176,14 @@ const Mensal = (() => {
       ['Entradas', v(R.recebido), v(R.aReceber), v(R.entradas)],
       ['Saídas', v(R.pago), v(R.aPagar), v(R.saidas)],
       ['Resultado', v(R.resultadoReal), v(R.aReceber - R.aPagar), v(R.resultado)], [],
-      ['Caixa acumulado até o mês (parte do saldo inicial)', v(acumuladoAte(ano, mes))],
       ['Pagamentos vencidos sem baixa', v(R.atrP), R.nAtrP + ' itens'],
       ['Recebimentos em atraso', v(R.atrR), R.nAtrR + ' itens'],
       ['Reinvestido (fora do caixa)', v(R.reinv), R.nReinv + ' itens'],
       ['Cancelado', v(R.canc), R.nCanc + ' itens']]);
     ws1['!cols'] = [{wch:32},{wch:18},{wch:18},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws1, 'Resumo');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Dia','Recebimentos','Pagamentos','Fluxo do dia','Saldo acumulado projetado'],
-      ...fluxoDiario(R).map(x => [fmtDate(x.data), v(x.e), v(x.s), v(x.saldo), v(x.acum)])]), 'Fluxo diário');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Dia','Recebimentos','Pagamentos','Fluxo do dia'],
+      ...fluxoDiario(R).map(x => [fmtDate(x.data), v(x.e), v(x.s), v(x.saldo)])]), 'Fluxo diário');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Pagamento','Beneficiário','Operação','Acordo','Status','Valor','Chave Pix'],
       ...R.sai.slice().sort((a,b) => a.dataPagamento < b.dataPagamento ? -1 : 1).map(r => [fmtDate(r.dataPagamento), r.contribuinte, r.operacao, r.acordo, r.status, r.valor, r.pix])]), 'Saídas');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Data','Pagador','Descrição','Status','Previsto','Recebido'],
@@ -7195,7 +7191,7 @@ const Mensal = (() => {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Operação','Qtde','Total','Pago','A pagar'],
       ...agrupar(R.sai.filter(NO_CAIXA), r => r.operacao || '(sem operação)', r => toC(r.valor), r => r.status === 'Pago').map(x => [x.k, x.n, v(x.v), v(x.real), v(x.v - x.real)])]), 'Por operação');
     let a = 0;
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Mês','Entradas','Saídas','Resultado','Acumulado','Recebido','Pago'],
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Mês','Entradas','Saídas','Resultado','Recebido','Pago'],
       ...MESES.map((n,i) => { const X = resumo(ym(ano, i+1)); a += X.resultado; return [n, v(X.entradas), v(X.saidas), v(X.resultado), v(a), v(X.recebido), v(X.pago)]; })]), `Ano ${ano}`);
     XLSX.writeFile(wb, `Relatorio-mensal-${chave}.xlsx`);
     toast('Planilha baixada');
