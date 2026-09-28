@@ -744,7 +744,14 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .rest-item{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--muted-2);
   border-radius:var(--r);padding:13px 14px;margin-bottom:12px;box-shadow:0 2px 8px rgba(22,36,56,.06)}
 .rest-item:last-of-type{margin-bottom:0}
-.rest-cab{border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:11px}
+.rest-cab{border-bottom:1px solid var(--line);padding-bottom:9px;margin-bottom:11px;display:flex;align-items:center;gap:10px}
+.rest-abre{display:flex;align-items:center;gap:10px;flex:1;text-align:left;color:var(--text);padding:2px 0}
+.rest-abre:hover .rest-qtd{color:var(--accent-2)}
+.rest-abre .seta{color:var(--muted-2);transition:transform .15s}
+.rest-abre.on .seta{transform:rotate(180deg)}
+.rest-qtd{margin-left:auto;font-size:11.5px;color:var(--muted-2);font-weight:700}
+.rest-contas{margin-top:12px;padding-top:11px;border-top:1px dashed var(--line)}
+.rest-grade small{font-weight:400;color:var(--muted-2);font-size:10px}
 .rest-item.rc-AZUL{border-left-color:#2F80ED}
 .rest-item.rc-GOL{border-left-color:#F2801A}
 .rest-item.rc-TAM,.rest-item.rc-LATAM{border-left-color:#D93A2F}
@@ -1473,7 +1480,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "28/09/2026 09:49";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "28/09/2026 11:04";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -1531,7 +1538,7 @@ const S = {
   rows: [], rec: [], adi: [], pagadores: [], ops: OPS_BASE.slice(), sel: new Set(), hist: [], log: [], users: [],
   sort: {k:'dataPagamento', dir:1}, sortRec: {k:'dataPrevista', dir:1}, sortAdi: {k:'dataAdiantada', dir:1},
   f: {...FILTROS_PADRAO}, fr: {q:'', pg:'', st:'Previsto', d1:'', d2:''},
-  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '',
+  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '', restAberto: '',
   cfg: {autoAplicar: true}, chat: [], alias: {}, avisado: false,
   view: 'bal'
 };
@@ -2432,6 +2439,39 @@ $('#view-est').addEventListener('click', async e => {
   }
 });
 $('#balEstoque').addEventListener('click', async e => {
+  const ab = e.target.closest('[data-abrirest]');
+  if (ab){
+    S.restAberto = S.restAberto === ab.dataset.abrirest ? '' : ab.dataset.abrirest;
+    return renderPainelPlanilha();
+  }
+  const addcb = e.target.closest('[data-addcb]');
+  if (addcb){
+    if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+    const itens = ((S.estoque && S.estoque.itens) || []).map(x => {
+      if (x.id !== addcb.dataset.addcb) return {...x};
+      const jaTem = (x.contas || []).length;
+      // a primeira conta herda o saldo que já estava digitado, para o número não se perder
+      const nova = {id:uid(), responsavel:'', titular:'', login:'', senha:'',
+        milhas: jaTem ? 0 : (Math.round(Number(x.saldo)) || 0)};
+      return {...x, contas:[...(x.contas || []), nova]};
+    });
+    const alvo = itens.find(x => x.id === addcb.dataset.addcb);
+    alvo.saldo = somaContasBloq(alvo);
+    await gravarEstoque(itens);
+    return;
+  }
+  const delcb = e.target.closest('[data-delcb]');
+  if (delcb){
+    if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+    const [eid, cid] = delcb.dataset.delcb.split('|');
+    if (!confirm('Remover esta conta?')) return;
+    const itens = ((S.estoque && S.estoque.itens) || []).map(x => x.id === eid
+      ? {...x, contas:(x.contas || []).filter(c => c.id !== cid)} : {...x});
+    const alvo = itens.find(x => x.id === eid);
+    if ((alvo.contas || []).length) alvo.saldo = somaContasBloq(alvo);
+    await gravarEstoque(itens);
+    return;
+  }
 
   if (e.target.closest('#salvarEstoque')){
     if (!podeEditar()) return toast('Seu acesso é somente leitura.');
@@ -3085,6 +3125,20 @@ $('#novaBloq').addEventListener('click', () => {
     motivo:'Milhas bloqueadas reconhecidas como perda'}, 'perda de milhas bloqueadas registrada');
 });
 $('#novoOutro').addEventListener('click', () => gravarPrejuizo({tipo:'outro', data:getTodaySP(), milheiro:0, milhas:0, motivo:''}, 'perda registrada'));
+
+/* campos das contas com milhas bloqueadas */
+$('#balEstoque').addEventListener('change', async e => {
+  const el = e.target;
+  if (!el.dataset.cbcampo) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  const eid = el.dataset.est, cid = el.dataset.cid, k = el.dataset.cbcampo;
+  const v = k === 'milhas' ? Math.round(parseNum(el.value)) : el.value;
+  const itens = ((S.estoque && S.estoque.itens) || []).map(x => x.id === eid
+    ? {...x, contas:(x.contas || []).map(c => c.id === cid ? {...c, [k]: v} : c)} : {...x});
+  const alvo = itens.find(x => x.id === eid);
+  alvo.saldo = somaContasBloq(alvo);          // o total vem da soma das contas
+  await gravarEstoque(itens);
+});
 
 /* ---------- navegação ---------- */
 function go(v){
@@ -6020,6 +6074,7 @@ function renomearEstoque(itens){
   });
   return mudou ? novos : null;
 }
+const somaContasBloq = i => (i.contas || []).reduce((s,c) => s + (Math.round(Number(c.milhas)) || 0), 0);
 const estoqueBase = () => S.estoque || ESTOQUE_PADRAO;
 const bloqueada = i => /BLOQUEAD/i.test(i.tipo);
 /** o total de cada linha é saldo × preço do milheiro ÷ 1000, como na planilha */
@@ -6178,16 +6233,39 @@ function renderPainelPlanilha(){
     + (restritos.length ? `<div class="restricao">
         <div class="pl-tit" style="color:var(--bad)">Ativos sob restrição — não compõem o estoque disponível</div>
         ${restritos.map(i => `<div class="rest-item rc-${esc(String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase())}" data-est="${i.id}">
-          <div class="rest-cab"><b class="comp comp-${esc(String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase())}">${esc(i.companhia)}</b>
-            <span>${esc(i.tipo)}</span>
+          <div class="rest-cab">
+            <button class="rest-abre ${S.restAberto === i.id ? 'on' : ''}" data-abrirest="${i.id}" title="Ver as contas dessas milhas">
+              <b class="comp comp-${esc(String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase())}">${esc(i.companhia)}</b>
+              <span>${esc(i.tipo)}</span>
+              <span class="rest-qtd">${(i.contas || []).length ? (i.contas || []).length + ' conta(s)' : 'sem contas registradas'}</span>
+              <svg class="seta" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+            </button>
             <button class="lixo" data-remest="${i.id}" title="Remover">✕</button></div>
           <div class="rest-grade">
-            <label>Milhas<input class="inp mini" data-campo="saldo" value="${i.saldo ? Number(i.saldo).toLocaleString('pt-BR') : ''}" placeholder="0"></label>
+            <label>Milhas${(i.contas || []).length ? ' <small>(somadas das contas)</small>' : ''}
+              <input class="inp mini" data-campo="saldo" value="${i.saldo ? Number(i.saldo).toLocaleString('pt-BR') : ''}" placeholder="0" ${(i.contas || []).length ? 'disabled' : ''}></label>
             <label>Valor nominal por milheiro<input class="inp mini" data-campo="media" value="${i.media ? i.media.toFixed(2).replace('.',',') : ''}" placeholder="0,00"></label>
             <label>Valor nominal<input class="inp mini" value="${brl(totalItem(i))}" disabled></label>
             <label>Data da atualização<input class="inp mini" data-campo="data" type="date" value="${i.data || ''}"></label>
           </div>
           <div class="rest-resumo">Valor considerado na posição disponível: <b>R$ 0,00</b></div>
+          ${S.restAberto !== i.id ? '' : `
+          <div class="rest-contas">
+            <div class="sub-cab"><b>Contas com milhas bloqueadas</b>
+              <button class="btn sm primary" data-addcb="${i.id}">+ Acrescentar conta</button></div>
+            ${(i.contas || []).length ? `<table class="pl-tab">
+              <thead><tr><th>Responsável</th><th>Titular</th><th>Login</th><th>Senha</th><th class="num">Milhas</th><th></th></tr></thead>
+              <tbody>${i.contas.map(c => `<tr>
+                <td><input class="inp mini" data-cbcampo="responsavel" data-est="${i.id}" data-cid="${c.id}" value="${esc(c.responsavel || '')}"></td>
+                <td><input class="inp mini" data-cbcampo="titular" data-est="${i.id}" data-cid="${c.id}" value="${esc(c.titular || '')}"></td>
+                <td><input class="inp mini" data-cbcampo="login" data-est="${i.id}" data-cid="${c.id}" value="${esc(c.login || '')}"></td>
+                <td><input class="inp mini" type="password" data-cbcampo="senha" data-est="${i.id}" data-cid="${c.id}" value="${esc(c.senha || '')}" placeholder="••••••"></td>
+                <td><input class="inp mini num" data-cbcampo="milhas" data-est="${i.id}" data-cid="${c.id}" value="${c.milhas ? Number(c.milhas).toLocaleString('pt-BR') : ''}" placeholder="0"></td>
+                <td><button class="lixo" data-delcb="${i.id}|${c.id}" title="Remover conta">✕</button></td></tr>`).join('')}</tbody>
+              <tfoot><tr><td colspan="4">${i.contas.length} conta(s)</td>
+                <td class="num forte">${somaContasBloq(i).toLocaleString('pt-BR')}</td><td></td></tr></tfoot>
+            </table>` : '<div class="empty">Nenhuma conta registrada. Enquanto não houver contas, as milhas ficam no campo acima.</div>'}
+          </div>`}
         </div>`).join('')}
       </div>` : '')
     + `<div class="pl-acoes">

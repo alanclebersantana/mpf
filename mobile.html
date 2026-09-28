@@ -174,6 +174,9 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 .tab-pc td{padding:6px 2px;border-bottom:1px solid var(--line-soft)}
 .tab-pc .n{text-align:right}
 .tab-pc td:first-child,.tab-pc th:first-child{width:52px}
+.tab-pc.larga{font-size:13px}
+.tab-pc.larga td:first-child,.tab-pc.larga th:first-child{width:auto}
+.tab-pc.larga td:nth-child(2),.tab-pc.larga th:nth-child(2){width:56px}
 .tab-pc .ent{color:var(--ok)}
 .tab-pc .sai{color:var(--accent-2)}
 .tab-pc .zero{color:var(--muted-2)}
@@ -229,7 +232,11 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 .bq-cia.c-AZUL{border-left-color:#2F80ED}
 .bq-cia.c-GOL{border-left-color:#F2801A} .bq-cia.c-SMILES{border-left-color:#F2801A}
 .bq-cia.c-TAM,.bq-cia.c-LATAM{border-left-color:#D93A2F}
-.bq-cab{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--line)}
+.bq-cab{display:flex;align-items:center;gap:8px;margin-bottom:10px;padding-bottom:9px;border-bottom:1px solid var(--line);
+  width:100%;text-align:left;color:var(--text)}
+.bq-cab .seta{color:var(--muted-2);flex:0 0 auto;transition:transform .15s}
+.bq-cab .seta.on{transform:rotate(180deg)}
+.bq-contas{margin-top:11px;padding-top:10px;border-top:1px dashed var(--line)}
 .bq-cab b:first-child{font-size:15px}
 .bq-cab span{flex:1;font-size:10.5px;color:var(--muted-2);font-weight:700}
 .bq-pe{font-size:11.5px;color:var(--muted-2)}
@@ -406,7 +413,7 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
     <div class="card"><div class="ch"><h2>A receber por pagador <span class="un">· valores em milhões</span></h2>
       <button class="bt-abrir" id="abrirRecTab">Ver tabela completa</button></div>
       <div id="bReceberTab"></div></div>
-    <div class="card"><h2>A pagar por data <span class="un">· valores em milhões</span></h2><div id="bPagarTab"></div></div>
+    <div class="card"><h2>A pagar por data <span class="un">· em reais</span></h2><div id="bPagarTab"></div></div>
     <div class="card"><h2>Hoje</h2><div id="bHoje"></div></div>
     <div class="card"><h2>Próximos dias</h2><div id="bDias"></div></div>
     
@@ -529,7 +536,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "28/09/2026 10:49";
+const VERSAO = "28/09/2026 11:04";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -538,7 +545,7 @@ const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','ag
 
 const S = {rows:[], rec:[], adi:[], log:[], estoque:{itens:[]}, saldo:{valor:0, mesRef:''},
   tela:'bal', mesSel:'', limite:{lanc:40, rec:40, adi:40},
-  sel:new Set(), selTipo:'', selModo:false, vendas:[], vendaAberta:'', vendaEdit:'', ciaAberta:'', limiteDias:7, prejuizos:[], prejAberto:'',
+  sel:new Set(), selTipo:'', selModo:false, bqAberto:'', vendas:[], vendaAberta:'', vendaEdit:'', ciaAberta:'', limiteDias:7, prejuizos:[], prejAberto:'',
   f:{lanc:{q:'', st:'Pendente', op:'', d1:'', d2:'', v1:'', v2:''},
      rec:{q:'', st:'Previsto', pg:'', d1:'', d2:''},
      adi:{q:'', st:'Aguardando', d1:'', d2:''}}};
@@ -851,7 +858,20 @@ function alternarSelecao(tipo){
 
 /* edição dos campos de prejuízo no celular */
 document.addEventListener('change', async e => {
-  const el = e.target, pid = el.dataset.pj;
+  const el = e.target;
+  if (el.dataset.cbcampo){
+    if (!podeEditar()) return recado('Seu acesso é somente leitura');
+    const eid = el.dataset.est, cid = el.dataset.cid, k = el.dataset.cbcampo;
+    const v = k === 'milhas' ? Math.round(parseNum(el.value)) : el.value;
+    const itens = ((S.estoque && S.estoque.itens) || []).map(x => x.id === eid
+      ? {...x, contas:(x.contas || []).map(c => c.id === cid ? {...c, [k]: v} : c)} : {...x});
+    const alvo = itens.find(x => x.id === eid);
+    alvo.saldo = somaContasBloq(alvo);
+    try { await fdb.collection('config').doc('estoque').set({itens, em:Date.now(), porQuem:APP.nome}); }
+    catch(err){ recado('Não consegui gravar: ' + (err.code || err.message)); }
+    return;
+  }
+  const pid = el.dataset.pj;
   if (!pid) return;
   const p = S.prejuizos.find(x => x.id === pid); if (!p) return;
   if (el.dataset.pcampo){
@@ -1128,6 +1148,7 @@ function normVenda(o){
     data: parseDate(o.data) || hojeSP(), pagador:String(o.pagador ?? '').trim(),
     recId:String(o.recId ?? ''), porQuem:String(o.porQuem ?? ''), em:o.em || 0};
 }
+const somaContasBloq = i => (i.contas || []).reduce((s,c) => s + (Math.round(Number(c.milhas)) || 0), 0);
 function ciasComEstoque(){
   const itens = ((S.estoque && S.estoque.itens) || []).filter(i => !/BLOQUEAD/i.test(i.tipo || ''));
   const mapa = new Map();
@@ -1320,11 +1341,16 @@ function pintarBalanco(){
   const pag = Calc.aPagarPorData();
   {
     const val = abrev;
+    const cheio = n => n ? n.toLocaleString('pt-BR',{minimumFractionDigits:2, maximumFractionDigits:2}) : '—';
     $('#bPagarTab').innerHTML = !pag.length ? '<div class="vazio">Nenhum pagamento em aberto.</div>' : `
-      <table class="tab-pc">
-        <thead><tr><th>Data de pagamento</th><th class="n">A pagar</th></tr></thead>
-        <tbody>${pag.map(x => `<tr><td>${fmtData(x.data).slice(0,5)}</td><td class="n sai">${val(x.total)}</td></tr>`).join('')}</tbody>
-        <tfoot><tr><td>Total geral</td><td class="n forte sai">${val(soma(S.rows.filter(ABERTO)))}</td></tr></tfoot>
+      <table class="tab-pc larga">
+        <thead><tr><th>Data de pagamento</th><th class="n">Pagamentos</th><th class="n">A pagar</th></tr></thead>
+        <tbody>${pag.map(x => `<tr><td>${fmtData(x.data)}</td>
+          <td class="n" style="color:var(--muted-2)">${x.n}</td>
+          <td class="n sai">${cheio(x.total)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr><td>Total geral</td>
+          <td class="n">${pag.reduce((s,x) => s + x.n, 0)}</td>
+          <td class="n forte sai">${cheio(soma(S.rows.filter(ABERTO)))}</td></tr></tfoot>
       </table>`;
   }
 
@@ -1414,10 +1440,14 @@ function pintarBalanco(){
     ${restritos.length ? `<div class="bloq-card">
       <div class="sub-t" style="color:var(--bad);margin-top:0;padding-top:0;border:none">Milhas bloqueadas — não entram na posição</div>
       ${restritos.map(i => `<div class="bq-cia c-${String(i.companhia).replace(/[^A-Za-z]/g,'').toUpperCase()}">
-        <div class="bq-cab"><b class="${corCia(i.companhia)}">${esc(i.companhia)}</b>
-          <span>${esc(i.tipo)}</span><b style="color:var(--bad)">${brl(est.total(i))}</b></div>
-        <div class="m-campo"><label for="bq-${i.id}-saldo">Milhas bloqueadas</label>
-          <input id="bq-${i.id}-saldo" data-est="${i.id}" data-campo="saldo" inputmode="numeric" value="${i.saldo ? Number(i.saldo).toLocaleString('pt-BR') : ''}" placeholder="0"></div>
+        <button class="bq-cab" data-abrirbq="${i.id}">
+          <b class="${corCia(i.companhia)}">${esc(i.companhia)}</b>
+          <span>${(i.contas || []).length ? (i.contas || []).length + ' conta(s)' : esc(i.tipo)}</span>
+          <b style="color:var(--bad)">${brl(est.total(i))}</b>
+          <svg class="seta ${S.bqAberto === i.id ? 'on' : ''}" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="m-campo"><label for="bq-${i.id}-saldo">Milhas bloqueadas${(i.contas || []).length ? ' · somadas das contas' : ''}</label>
+          <input id="bq-${i.id}-saldo" data-est="${i.id}" data-campo="saldo" inputmode="numeric" value="${i.saldo ? Number(i.saldo).toLocaleString('pt-BR') : ''}" placeholder="0" ${(i.contas || []).length ? 'disabled' : ''}></div>
         <div class="m-duas">
           <div class="m-campo"><label for="bq-${i.id}-media">Valor por milheiro</label>
             <input id="bq-${i.id}-media" data-est="${i.id}" data-campo="media" inputmode="decimal" value="${i.media ? i.media.toFixed(2).replace('.',',') : ''}" placeholder="0,00"></div>
@@ -1425,6 +1455,29 @@ function pintarBalanco(){
             <input id="bq-${i.id}-data" data-est="${i.id}" data-campo="data" type="date" value="${i.data || ''}"></div>
         </div>
         <div class="bq-pe">Valor considerado na posição: <b>R$ 0,00</b></div>
+        ${S.bqAberto !== i.id ? '' : `
+        <div class="bq-contas">
+          <div class="sub-t">Contas com milhas bloqueadas</div>
+          ${(i.contas || []).map(c => `<div class="conta-cel">
+            <div class="m-campo"><label>Responsável</label>
+              <input data-est="${i.id}" data-cid="${c.id}" data-cbcampo="responsavel" value="${esc(c.responsavel || '')}" placeholder="quem responde"></div>
+            <div class="m-campo"><label>Titular</label>
+              <input data-est="${i.id}" data-cid="${c.id}" data-cbcampo="titular" value="${esc(c.titular || '')}"></div>
+            <div class="m-duas">
+              <div class="m-campo"><label>Login</label>
+                <input data-est="${i.id}" data-cid="${c.id}" data-cbcampo="login" value="${esc(c.login || '')}"></div>
+              <div class="m-campo"><label>Senha</label>
+                <input type="password" data-est="${i.id}" data-cid="${c.id}" data-cbcampo="senha" value="${esc(c.senha || '')}" placeholder="••••••"></div>
+            </div>
+            <div class="m-campo"><label>Milhas bloqueadas</label>
+              <input inputmode="numeric" data-est="${i.id}" data-cid="${c.id}" data-cbcampo="milhas" value="${c.milhas ? Number(c.milhas).toLocaleString('pt-BR') : ''}" placeholder="0"></div>
+            <div class="conta-pe"><span></span>
+              <button class="bt leve pequeno" data-delcb="${i.id}|${c.id}">Remover conta</button></div>
+          </div>`).join('')}
+          ${(i.contas || []).length ? `<div class="linha"><div class="esq"><b>${i.contas.length} conta(s)</b></div>
+            <div class="dir">${somaContasBloq(i).toLocaleString('pt-BR')} milhas</div></div>` : '<div class="vazio">Nenhuma conta registrada.</div>'}
+          <button class="m-bt" data-addcb="${i.id}">+ Acrescentar conta</button>
+        </div>`}
       </div>`).join('')}
       <button class="m-bt forte" data-salvarest="1" style="margin-top:2px">Salvar milhas bloqueadas</button>
     </div>` : ''}`;
@@ -1832,6 +1885,40 @@ document.addEventListener('click', async e => {
     S.prejAberto = S.prejAberto === pj.dataset.prej ? '' : pj.dataset.prej;
     return pintarPrejuizos();
   }
+  const abq = e.target.closest('[data-abrirbq]');
+  if (abq){
+    S.bqAberto = S.bqAberto === abq.dataset.abrirbq ? '' : abq.dataset.abrirbq;
+    return pintarBalanco();
+  }
+  const addcb = e.target.closest('[data-addcb]');
+  if (addcb){
+    if (!podeEditar()) return recado('Seu acesso é somente leitura');
+    const itens = ((S.estoque && S.estoque.itens) || []).map(x => {
+      if (x.id !== addcb.dataset.addcb) return {...x};
+      const jaTem = (x.contas || []).length;
+      return {...x, contas:[...(x.contas || []), {id:uid(), responsavel:'', titular:'', login:'', senha:'',
+        milhas: jaTem ? 0 : (Math.round(Number(x.saldo)) || 0)}]};
+    });
+    const alvo = itens.find(x => x.id === addcb.dataset.addcb);
+    alvo.saldo = somaContasBloq(alvo);
+    try { await fdb.collection('config').doc('estoque').set({itens, em:Date.now(), porQuem:APP.nome}); }
+    catch(err){ recado('Não consegui gravar: ' + (err.code || err.message)); }
+    return;
+  }
+  const delcb = e.target.closest('[data-delcb]');
+  if (delcb){
+    if (!podeEditar()) return recado('Seu acesso é somente leitura');
+    const [eid, cid] = delcb.dataset.delcb.split('|');
+    if (!confirm('Remover esta conta?')) return;
+    const itens = ((S.estoque && S.estoque.itens) || []).map(x => x.id === eid
+      ? {...x, contas:(x.contas || []).filter(c => c.id !== cid)} : {...x});
+    const alvo = itens.find(x => x.id === eid);
+    if ((alvo.contas || []).length) alvo.saldo = somaContasBloq(alvo);
+    try { await fdb.collection('config').doc('estoque').set({itens, em:Date.now(), porQuem:APP.nome}); }
+    catch(err){ recado('Não consegui gravar: ' + (err.code || err.message)); }
+    return;
+  }
+
   const ciaEst = e.target.closest('[data-ciaest]');
   if (ciaEst){
     S.ciaAberta = S.ciaAberta === ciaEst.dataset.ciaest ? '' : ciaEst.dataset.ciaest;
