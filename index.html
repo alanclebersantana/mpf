@@ -1245,6 +1245,13 @@ try { document.documentElement.dataset.tema =
             <span class="ibox"><input class="inp" id="cfQ" placeholder="nome informado ou contribuinte" autocomplete="off"></span></div>
           <div class="field"><label for="cfFd">Data</label>
             <span class="ibox"><select class="inp" id="cfFd"></select></span></div>
+          <div class="field"><label for="cfFs">Situação</label>
+            <span class="ibox"><select class="inp" id="cfFs">
+              <option value="">todas</option>
+              <option value="nova">Ainda não conferidas</option>
+              <option value="aprovada">Aprovadas</option>
+              <option value="reprovada">Reprovadas</option>
+            </select></span></div>
           <button class="btn sm ghost" id="cfLimpar">Limpar</button>
           <span class="cf-conta" id="cfConta"></span>
         </div>
@@ -1585,7 +1592,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 14:25";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 14:44";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -1643,7 +1650,7 @@ const S = {
   rows: [], rec: [], adi: [], pagadores: [], ops: OPS_BASE.slice(), sel: new Set(), hist: [], log: [], users: [],
   sort: {k:'dataPagamento', dir:1}, sortRec: {k:'dataPrevista', dir:1}, sortAdi: {k:'dataAdiantada', dir:1},
   f: {...FILTROS_PADRAO}, fr: {q:'', pg:'', st:'Previsto', d1:'', d2:''},
-  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '', restAberto: '', respostas: [], rodada: null, cfAba: 'resp', cfQ: '', cfData: '',
+  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '', restAberto: '', respostas: [], rodada: null, cfAba: 'resp', cfQ: '', cfData: '', cfSit: '',
   cfg: {autoAplicar: true}, chat: [], alias: {}, avisado: false,
   view: 'bal'
 };
@@ -3328,8 +3335,9 @@ $('#cfLinkBox').addEventListener('click', e => {
 });
 $('#cfQ').addEventListener('input', () => { S.cfQ = $('#cfQ').value; renderConferencia(); });
 $('#cfFd').addEventListener('change', () => { S.cfData = $('#cfFd').value; renderConferencia(); });
+$('#cfFs').addEventListener('change', () => { S.cfSit = $('#cfFs').value; renderConferencia(); });
 $('#cfLimpar').addEventListener('click', () => {
-  S.cfQ = ''; S.cfData = '';
+  S.cfQ = ''; S.cfData = ''; S.cfSit = '';
   $('#cfQ').value = '';
   renderConferencia();
 });
@@ -6689,14 +6697,18 @@ function renderConferencia(){
   const combina = x => {
     if (busca && !semAcento(`${x.nome} ${x.contribuinte || ''}`).includes(busca)) return false;
     if (S.cfData && !(x.datas.length ? x.datas : r.datas).includes(S.cfData)) return false;
+    // "ainda não conferidas" junta as que nunca foram abertas e as que continuam sem decisão
+    if (S.cfSit === 'nova' && ['aprovada','reprovada','pendente'].includes(x.situacao)) return false;
+    if (S.cfSit && S.cfSit !== 'nova' && x.situacao !== S.cfSit) return false;
     return true;
   };
   const todas = S.respostas.filter(x => x.rodada === r.id);
   const lista = todas.filter(combina);
-  const filtrando = !!(busca || S.cfData);
+  const filtrando = !!(busca || S.cfData || S.cfSit);
   if ($('#cfFd')) $('#cfFd').innerHTML = '<option value="">todas as datas</option>'
     + r.datas.map(d => `<option value="${d}" ${S.cfData === d ? 'selected' : ''}>${fmtDate(d)}</option>`).join('');
   if ($('#cfQ') && $('#cfQ').value !== (S.cfQ || '')) $('#cfQ').value = S.cfQ || '';
+  if ($('#cfFs')) $('#cfFs').value = S.cfSit || '';
   const aba = S.cfAba || 'resp';
   const resp = lista.filter(x => x.situacao !== 'pendente');
   const pend = lista.filter(x => x.situacao === 'pendente');
@@ -6720,8 +6732,12 @@ function renderConferencia(){
   const aviso = [];
   if (busca) aviso.push(`nome com “${esc(S.cfQ)}”`);
   if (S.cfData) aviso.push(fmtDate(S.cfData));
+  if (S.cfSit) aviso.push({nova:'ainda não conferidas', aprovada:'aprovadas', reprovada:'reprovadas'}[S.cfSit]);
   $('#cfConta').textContent = filtrando
     ? `mostrando ${aviso.join(' · ')} — ${lista.length} de ${todas.length} resposta(s)` : '';
+  const semConferir = todas.filter(x => !['aprovada','reprovada','pendente'].includes(x.situacao)).length;
+  $('#cfAbas').querySelector('[data-cfaba="resp"]').title =
+    `${semConferir} de ${todas.length} ainda sem conferir`;
   $('#pipResp').textContent = resp.length;
   $('#pipPend').textContent = pend.length;
   $('#pipSem').textContent = sem.length;
