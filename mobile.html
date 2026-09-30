@@ -275,11 +275,11 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 .dia .selo-pago{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;
   background:var(--ok-dim);color:var(--ok)}
 .dia .selo-parc{background:var(--warn-dim);color:var(--warn)}
-.topo-fixo{position:sticky;top:0;z-index:20;background:var(--bg);padding-bottom:8px;
+.topo-fixo{position:sticky;top:var(--h-topo, 62px);z-index:20;background:var(--bg);padding-bottom:8px;
   margin:0 -12px;padding-left:12px;padding-right:12px;box-shadow:0 8px 14px -10px rgba(16,35,63,.35)}
 .topo-fixo .card.destaque{margin-top:10px;margin-bottom:0}
 .topo-fixo .duplo{margin-bottom:0}
-.rola-dias{max-height:calc(100vh - 430px);min-height:240px;overflow-y:auto;-webkit-overflow-scrolling:touch;
+.rola-dias{max-height:calc(100vh - var(--h-topo, 62px) - 372px);min-height:220px;overflow-y:auto;-webkit-overflow-scrolling:touch;
   margin:0 -2px;padding:0 2px}
 #mDias .dia.hoje{background:var(--accent-dim);border-radius:10px;padding-left:9px;padding-right:9px}
 #mDias .dia.hoje .data::after{content:' · hoje';font-size:11px;font-weight:700;color:var(--accent-2)}
@@ -554,7 +554,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "30/09/2026 09:26";
+const VERSAO = "30/09/2026 09:29";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -2157,6 +2157,18 @@ function montarChips(){
                ['chipsAdi','adi',['Aguardando','Pago','Todos']]];
   cfg.forEach(([id, tipo, ops]) => { const el = $('#'+id); el.dataset.tipo = tipo; el.innerHTML = chipsHTML(ops, S.f[tipo].st); });
 }
+
+/** a barra do aplicativo é fixa; o bloco do fluxo precisa grudar logo abaixo dela */
+function medirTopo(){
+  const barra = document.querySelector('.topo');
+  if (!barra) return;
+  const h = barra.getBoundingClientRect().height || barra.offsetHeight;
+  if (h > 0) document.documentElement.style.setProperty('--h-topo', Math.round(h) + 'px');
+}
+window.addEventListener('resize', medirTopo);
+window.addEventListener('orientationchange', () => setTimeout(medirTopo, 120));
+document.addEventListener('DOMContentLoaded', medirTopo);
+setTimeout(medirTopo, 0);
 
 /* tema */
 function aplicarTema(t){
