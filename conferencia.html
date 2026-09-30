@@ -34,6 +34,17 @@ body{background:var(--bg);font:15px/1.5 Nunito,system-ui,sans-serif;color:var(--
 .duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .data-l{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:11px;padding:12px;margin-bottom:10px}
 .data-l .dt{font-size:12.5px;font-weight:800;color:var(--accent-2);margin-bottom:8px}
+.pg-l{background:var(--surface);border:1px solid var(--line-soft);border-radius:10px;padding:11px;margin-bottom:8px}
+.pg-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.pg-cab span{font-size:11.5px;font-weight:800;color:var(--muted-2);text-transform:uppercase;letter-spacing:.3px}
+.pg-cab .tirar{font-size:12px;font-weight:700;color:var(--bad)}
+.mais{width:100%;height:42px;border-radius:10px;border:1px dashed var(--line);background:var(--surface);
+  font-size:13.5px;font-weight:700;color:var(--accent-2)}
+.soma-d{text-align:right;font-size:12.5px;color:var(--muted);margin-top:9px}
+.soma-d b{color:var(--text)}
+.f textarea{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:10px;
+  background:var(--surface);font:inherit;font-size:16px;resize:vertical}
+.f textarea:focus{outline:none;border-color:var(--accent);background:var(--accent-dim)}
 .bt-grande{width:100%;height:52px;border-radius:11px;background:var(--accent);color:#fff;font-size:15.5px;font-weight:800}
 .bt-grande:disabled{opacity:.6}
 .bt-leve{width:100%;height:48px;border-radius:11px;background:var(--surface-2);border:1px solid var(--line);font-weight:700;margin-top:10px}
@@ -84,6 +95,8 @@ body{background:var(--bg);font:15px/1.5 Nunito,system-ui,sans-serif;color:var(--
           <input id="chave" placeholder="sua chave">
           <div class="erro">Informe a chave Pix.</div></div>
       </div>
+      <div class="f"><label for="obs">Observação (opcional)</label>
+        <textarea id="obs" rows="3" placeholder="algo que o financeiro precise saber"></textarea></div>
       <button class="bt-grande" id="btConfirmar">Confirmar</button>
     </div>
     <div class="rodape" id="rodapePrazo"></div>
@@ -226,23 +239,68 @@ let fdb = null, rodada = null, enviada = null;
   }
 })();
 
+/** cada data começa com um pagamento; a pessoa acrescenta quantos quiser */
+let linhas = {};
 function montarForm(){
-  $('#datas').innerHTML = rodada.datas.map(d => `
-    <div class="data-l"><div class="dt">${diaSemana(d)}, ${fmtData(d)}</div>
-      <div class="f" style="margin:0"><label for="v-${d}">Valor a receber</label>
-        <input id="v-${d}" data-data="${d}" inputmode="decimal" placeholder="0,00">
-        <div class="eco" id="eco-${d}"></div></div></div>`).join('');
-  document.querySelectorAll('#datas input').forEach(el => {
-    const eco = () => {
-      const alvo = document.getElementById('eco-' + el.dataset.data);
-      const v = parseNum(el.value);
-      alvo.textContent = el.value.trim() ? 'Entendi ' + brl(v) : '';
-    };
-    el.addEventListener('input', eco);
-    el.addEventListener('blur', () => { if (el.value.trim()) el.value = brl(parseNum(el.value)).replace('R$ ',''); eco(); });
-  });
+  rodada.datas.forEach(d => linhas[d] = [{id: 'l' + Math.random().toString(36).slice(2,8)}]);
+  pintarDatas();
   $('#rodapePrazo').textContent = rodada.prazo ? 'Prazo para responder: ' + fmtData(rodada.prazo) : '';
 }
+
+function pintarDatas(){
+  $('#datas').innerHTML = rodada.datas.map(d => {
+    const ls = linhas[d];
+    return `<div class="data-l"><div class="dt">${diaSemana(d)}, ${fmtData(d)}</div>
+      ${ls.map((l, i) => `<div class="pg-l">
+        ${ls.length > 1 ? `<div class="pg-cab"><span>Pagamento ${i+1}</span>
+          <button class="tirar" data-tirar="${d}|${l.id}">remover</button></div>` : ''}
+        <div class="f"><label for="v-${l.id}">Valor a receber</label>
+          <input id="v-${l.id}" data-linha="${d}|${l.id}" inputmode="decimal" placeholder="0,00" value="${l.valor || ''}">
+          <div class="eco" id="eco-${l.id}"></div></div>
+        <div class="f" style="margin-bottom:0"><label for="o-${l.id}">Referente a (opcional)</label>
+          <input id="o-${l.id}" data-op="${d}|${l.id}" placeholder="operação, acordo ou observação" value="${l.operacao || ''}"></div>
+      </div>`).join('')}
+      <button class="mais" data-mais="${d}">+ Outro pagamento nesta data</button>
+      ${ls.length > 1 ? `<div class="soma-d">Total do dia: <b>${brl(ls.reduce((s,l) => s + parseNum(l.valor), 0))}</b></div>` : ''}
+    </div>`;
+  }).join('');
+
+  document.querySelectorAll('#datas [data-linha]').forEach(el => {
+    const [d, id] = el.dataset.linha.split('|');
+    const guarda = () => { const l = linhas[d].find(x => x.id === id); if (l) l.valor = el.value; };
+    const eco = () => {
+      const alvo = document.getElementById('eco-' + id);
+      alvo.textContent = el.value.trim() ? 'Entendi ' + brl(parseNum(el.value)) : '';
+    };
+    el.addEventListener('input', () => { guarda(); eco(); });
+    el.addEventListener('blur', () => {
+      if (el.value.trim()) el.value = brl(parseNum(el.value)).replace('R$ ','');
+      guarda(); eco();
+      if (linhas[d].length > 1) pintarDatas();
+    });
+    eco();
+  });
+  document.querySelectorAll('#datas [data-op]').forEach(el => {
+    const [d, id] = el.dataset.op.split('|');
+    el.addEventListener('input', () => { const l = linhas[d].find(x => x.id === id); if (l) l.operacao = el.value; });
+  });
+}
+
+$('#datas').addEventListener('click', e => {
+  const mais = e.target.closest('[data-mais]');
+  if (mais){
+    linhas[mais.dataset.mais].push({id: 'l' + Math.random().toString(36).slice(2,8)});
+    pintarDatas();
+    return;
+  }
+  const tirar = e.target.closest('[data-tirar]');
+  if (tirar){
+    const [d, id] = tirar.dataset.tirar.split('|');
+    linhas[d] = linhas[d].filter(x => x.id !== id);
+    if (!linhas[d].length) linhas[d] = [{id: 'l' + Math.random().toString(36).slice(2,8)}];
+    pintarDatas();
+  }
+});
 
 $('#btConfirmar').addEventListener('click', () => {
   let erro = false;
@@ -259,8 +317,13 @@ $('#btSim').addEventListener('click', async () => {
   $('#mConferir').classList.remove('on');
   const bt = $('#btConfirmar'); bt.disabled = true; bt.textContent = 'Enviando…';
   const nome = $('#nome').value.trim(), chave = $('#chave').value.trim();
-  const valores = {};
-  rodada.datas.forEach(d => valores[d] = parseNum($('#v-' + d).value));
+  const valores = {}, itens = {};
+  rodada.datas.forEach(d => {
+    const ls = (linhas[d] || []).filter(l => String(l.valor || '').trim() || String(l.operacao || '').trim());
+    itens[d] = ls.map(l => ({valor: parseNum(l.valor), operacao: String(l.operacao || '').trim().slice(0, 80)}));
+    valores[d] = itens[d].reduce((s, x) => s + x.valor, 0);
+  });
+  const obs = String($('#obs').value || '').trim().slice(0, 500);
   try {
     // quem já respondeu com o mesmo nome ou a mesma chave não responde de novo.
     // os marcadores são códigos embaralhados: não revelam nome nem chave de ninguém.
@@ -280,7 +343,7 @@ $('#btSim').addEventListener('click', async () => {
       return;
     }
     const doc = {rodada:rodada.id, nome, chave, tipoChave:$('#tipoChave').value,
-      valores, enviadaEm:Date.now(), situacao:'nova', repetida:false, correcao:''};
+      valores, itens, obs, enviadaEm:Date.now(), situacao:'nova', repetida:false, correcao:''};
     const ref = await fdb.collection('respostas').add(doc);
     enviada = {id:ref.id, ...doc};
     const agora = Date.now();
@@ -289,8 +352,10 @@ $('#btSim').addEventListener('click', async () => {
       marcas.doc(mChave).set({resp:ref.id, em:agora})
     ]).catch(() => {});
     $('#resumoEnvio').innerHTML = rodada.datas.map(d =>
-      `<div><span>${fmtData(d)}</span><b>${brl(valores[d])}</b></div>`).join('')
-      + `<div><span>Chave Pix</span><b>${$('#tipoChave').value} · ${chave}</b></div>`;
+      `<div><span>${fmtData(d)}${itens[d].length > 1 ? ` <small>(${itens[d].length} pagamentos)</small>` : ''}</span>
+        <b>${brl(valores[d])}</b></div>`).join('')
+      + `<div><span>Chave Pix</span><b>${$('#tipoChave').value} · ${chave}</b></div>`
+      + (obs ? `<div><span>Observação</span><b>${obs.replace(/</g,'&lt;')}</b></div>` : '');
     $('#rodapeEnvio').textContent = 'Enviado em ' + new Date().toLocaleString('pt-BR');
     mostra('tela-ok');
   } catch(e){

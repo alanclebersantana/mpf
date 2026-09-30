@@ -693,6 +693,14 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .cf-duvida{background:var(--warn-dim);color:var(--warn)}
 .cf-rep{background:var(--bad-dim);color:var(--bad)}
 .cf-apr{background:var(--ok-dim);color:var(--ok)}
+.cf-nota{background:var(--surface-2);color:var(--muted)}
+.cf-det td{background:var(--surface-2);padding-top:0}
+.cf-det-cols{display:grid;grid-template-columns:1fr 1fr;gap:14px;font-size:11.5px}
+.cf-det-cols i{display:block;font-style:normal;font-weight:800;color:var(--muted-2);text-transform:uppercase;
+  letter-spacing:.3px;font-size:9.5px;margin-bottom:3px}
+.cf-det-cols span{display:block;color:var(--muted);padding:1px 0}
+.cf-obs{background:var(--surface-2);border-radius:9px;padding:10px 12px;font-size:12.5px;margin:10px 0;white-space:pre-wrap}
+.cf-obs b{display:block;font-size:11px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
 .cf-fora{opacity:.55}
 .cf-fora .cf-ok,.cf-fora .cf-dif{filter:grayscale(.7)}
 .cf-acoes{white-space:nowrap;display:flex;gap:6px;justify-content:flex-end;align-items:center}
@@ -1555,7 +1563,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 11:01";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 11:24";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2848,8 +2856,12 @@ const valorDaConta = c => c.valorManual ? c.valor : fromCents(Math.round(toCents
 function normalizeResposta(o){
   const valores = {};
   Object.entries(o.valores || {}).forEach(([d, v]) => valores[d] = Math.round(parseNum(v) * 100) / 100);
+  const itens = {};
+  Object.entries(o.itens || {}).forEach(([d, lista]) => itens[d] = (lista || []).map(x => ({
+    valor: Math.round(parseNum(x.valor) * 100) / 100, operacao: String(x.operacao ?? '').trim()})));
   return {id:o.id, rodada:String(o.rodada ?? ''), nome:String(o.nome ?? '').trim(),
-    valores, chave:String(o.chave ?? '').trim(), tipoChave:String(o.tipoChave ?? '').trim(),
+    valores, itens, obs:String(o.obs ?? ''),
+    chave:String(o.chave ?? '').trim(), tipoChave:String(o.tipoChave ?? '').trim(),
     enviadaEm: Number(o.enviadaEm) || 0, repetida: !!o.repetida, correcao: String(o.correcao ?? ''),
     situacao: String(o.situacao ?? 'nova'), motivo: String(o.motivo ?? ''),
     contribuinte: String(o.contribuinte ?? ''),
@@ -6333,9 +6345,10 @@ const Conferencia = {
     S.rows.filter(r => datas.has(r.dataPagamento)).forEach(r => {
       const k = String(r.contribuinte || '').trim();
       if (!k) return;
-      const x = mapa.get(k.toLowerCase()) || {nome:k, chave:r.pix || '', tipo:r.tipoPix || '', linhas:[], porData:{}};
+      const x = mapa.get(k.toLowerCase()) || {nome:k, chave:r.pix || '', tipo:r.tipoPix || '', linhas:[], porData:{}, itensData:{}};
       x.linhas.push(r);
       x.porData[r.dataPagamento] = (x.porData[r.dataPagamento] || 0) + r.valor;
+      (x.itensData[r.dataPagamento] = x.itensData[r.dataPagamento] || []).push(r);
       if (!x.chave && r.pix) { x.chave = r.pix; x.tipo = r.tipoPix || ''; }
       mapa.set(k.toLowerCase(), x);
     });
@@ -6370,7 +6383,9 @@ const Conferencia = {
     return datas.map(d => {
       const dito = Math.round(parseNum((resposta.valores || {})[d]) * 100) / 100;
       const sistema = cand ? Math.round((cand.porData[d] || 0) * 100) / 100 : 0;
-      return {data:d, dito, sistema, bate: toCents(dito) === toCents(sistema)};
+      return {data:d, dito, sistema, bate: toCents(dito) === toCents(sistema),
+        ditos: (resposta.itens || {})[d] || [],
+        nossos: cand ? (cand.itensData[d] || []) : []};
     });
   }
 };
@@ -6554,9 +6569,11 @@ function renderConferencia(){
             ${x.situacao === 'reprovada' ? '<span class="cf-tag cf-rep">reprovada</span>' : ''}
             ${!cand && x.situacao !== 'reprovada' ? '<span class="cf-tag cf-duvida">quem é?</span>' : ''}
             ${x.repetida ? '<span class="cf-tag cf-rep">tentou responder de novo</span>' : ''}
-            ${x.correcao ? '<span class="cf-tag cf-rep">pediu correção</span>' : ''}</span>
+            ${x.correcao ? '<span class="cf-tag cf-rep">pediu correção</span>' : ''}
+            ${x.obs ? '<span class="cf-tag cf-nota">tem observação</span>' : ''}</span>
           ${x.motivo ? `<span class="cf-meta">motivo: ${esc(x.motivo)}</span>` : ''}</td>
         ${cmp.map(c => `<td class="num"><span class="${!cand ? 'cf-neutro' : c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.dito)}
+          ${c.ditos.length > 1 ? `<small>${c.ditos.length} pagamentos</small>` : ''}
           ${!cand || c.bate ? '' : `<small>sistema: ${brl(c.sistema)}</small>`}</span></td>`).join('')}
         <td><span class="${!cand ? 'cf-neutro' : chaveOk ? 'cf-ok' : 'cf-dif'}">${esc(x.tipoChave || '—')}${x.chave ? ' · ' + esc(x.chave) : ''}
           ${chaveOk || !cand ? '' : `<small>sistema: ${esc(cand.chave || 'sem chave')}</small>`}</span></td>
@@ -6594,11 +6611,20 @@ function abrirConferencia(id){
       ${problemas ? `<b class="cf-dif-txt">${problemas} ponto(s) fora.</b>` : '<b class="cf-ok-txt">Tudo bate.</b>'}</p>
     <table class="pl-tab">
       <thead><tr><th>Data</th><th class="num">Informou</th><th class="num">No sistema</th></tr></thead>
-      <tbody>${cmp.map(c => `<tr><td>${fmtDate(c.data)}</td><td class="num">${brl(c.dito)}</td>
-        <td class="num"><span class="${c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.sistema)}</span></td></tr>`).join('')}
+      <tbody>${cmp.map(c => {
+        const detalhe = c.ditos.length > 1 || c.nossos.length > 1;
+        return `<tr><td>${fmtDate(c.data)}</td><td class="num">${brl(c.dito)}</td>
+          <td class="num"><span class="${c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.sistema)}</span></td></tr>
+        ${!detalhe ? '' : `<tr class="cf-det"><td colspan="3">
+          <div class="cf-det-cols">
+            <div><i>informou</i>${c.ditos.length ? c.ditos.map(x => `<span>${brl(x.valor)}${x.operacao ? ' · ' + esc(x.operacao) : ''}</span>`).join('') : '<span>—</span>'}</div>
+            <div><i>no sistema</i>${c.nossos.length ? c.nossos.map(r => `<span>${brl(r.valor)}${r.operacao ? ' · ' + esc(r.operacao) : ''}${r.codigo ? ' · ' + esc(r.codigo) : ''}</span>`).join('') : '<span>—</span>'}</div>
+          </div></td></tr>`}`;
+      }).join('')}
         <tr><td>Chave Pix</td><td class="num">${esc(x.tipoChave || '—')} ${esc(x.chave || '')}</td>
           <td class="num"><span class="${chaveOk ? 'cf-ok' : 'cf-dif'}">${chaveOk ? 'igual' : esc(cand.chave || 'sem chave')}</span></td></tr>
       </tbody></table>
+    ${x.obs ? `<div class="cf-obs"><b>Observação de quem respondeu</b>${esc(x.obs)}</div>` : ''}
     ${x.correcao ? `<div class="cf-aviso">Pediu correção: ${esc(x.correcao)}</div>` : ''}
     ${x.repetida ? '<div class="cf-aviso">Tentou responder mais de uma vez — só a primeira resposta vale.</div>' : ''}
     <p class="sub">Ao aprovar, a caixinha <b>“valor validado com o contribuinte”</b> é marcada
