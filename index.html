@@ -674,6 +674,42 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .rail-foot .bkline{font-size:11px;color:var(--nav-muted)}
 .pl-painel{display:grid;grid-template-columns:1fr 1fr minmax(240px,.9fr);gap:14px}
 .pl-bloco{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--rs);padding:12px 14px}
+.cf-cfg{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.cf-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.cf-chip{background:var(--accent-dim);border:1px solid #EBD3C2;border-radius:999px;padding:5px 8px 5px 13px;
+  font-size:12.5px;font-weight:700;color:var(--accent-2);display:inline-flex;align-items:center;gap:5px}
+.cf-chip button{color:var(--accent-2);opacity:.6;font-size:13px;padding:0 2px}
+.cf-chip button:hover{opacity:1}
+.cf-vazio{color:var(--muted-2);font-size:12.5px}
+.cf-link{display:flex;gap:8px;align-items:center;margin-top:14px;background:var(--surface-2);
+  border:1px dashed var(--line);border-radius:9px;padding:10px 12px;font-size:12.5px}
+.cf-link code{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-abas{display:flex;gap:6px;margin:16px 0 12px;border-bottom:1px solid var(--line)}
+.cf-abas button{padding:9px 14px;font-size:13px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
+.cf-abas button.on{color:var(--accent-2);border-bottom-color:var(--accent)}
+.cf-abas .pip{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;background:var(--surface-2);font-size:11px}
+.cf-meta{display:block;font-size:11.5px;color:var(--muted-2);margin-top:2px}
+.cf-tag{display:inline-block;margin-left:5px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:800}
+.cf-duvida{background:var(--warn-dim);color:var(--warn)}
+.cf-rep{background:var(--bad-dim);color:var(--bad)}
+.cf-ok{background:var(--ok-dim);color:var(--ok);font-weight:800;border-radius:7px;padding:3px 8px;display:inline-block}
+.cf-dif{background:var(--bad-dim);color:var(--bad);font-weight:800;border-radius:7px;padding:3px 8px;display:inline-block}
+.cf-ok small,.cf-dif small{display:block;font-weight:600;font-size:10.5px;opacity:.85}
+.cf-neutro{background:var(--surface-2);color:var(--muted);font-weight:700;border-radius:7px;padding:3px 8px;display:inline-block}
+.cf-ok-txt{color:var(--ok)} .cf-dif-txt{color:var(--bad)}
+.cf-aviso{background:var(--warn-dim);border:1px solid #EEDCB4;border-radius:9px;padding:10px 12px;
+  font-size:12.5px;color:#6E4E10;margin:10px 0}
+.cf-fundo{position:fixed;inset:0;background:rgba(10,16,26,.55);display:none;align-items:center;justify-content:center;padding:22px;z-index:70}
+.cf-fundo.on{display:flex}
+.cf-modal{background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:86vh;overflow:auto}
+.cf-modal h3{font-size:16.5px;font-weight:800;margin-bottom:6px}
+.cf-modal .sub{font-size:13px;color:var(--muted);margin-bottom:14px}
+.cf-ops{margin-bottom:14px}
+.cf-op{width:100%;text-align:left;border:1px solid var(--line);border-radius:10px;padding:11px 13px;margin-bottom:8px;background:var(--surface-2)}
+.cf-op b{display:block;font-size:13.5px}
+.cf-op span{font-size:11.5px;color:var(--muted-2)}
+.cf-op:hover{border-color:var(--accent);background:var(--accent-dim)}
+.modal-pe{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px;max-width:720px}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
 .kpi .lab{color:var(--muted-2);font-size:11.5px;font-weight:700}
@@ -1069,6 +1105,7 @@ try { document.documentElement.dataset.tema =
       <button data-view="bal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v18M6 8h8.5a2.5 2.5 0 0 1 0 5H6M6 18h9"/></svg>Visão geral</button>
       <button data-view="mensal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4.5" width="18" height="16" rx="2"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M7.5 14h3M13.5 14h3M7.5 17h3"/></svg>Fluxo de caixa</button>
       <button data-view="lanc"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 5h18M3 12h18M3 19h18"/></svg>Pagamentos</button>
+      <button data-view="conf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Conferência de valores</button>
       <button data-view="rec"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M7 10l5 5 5-5M4 21h16"/></svg>Recebimentos</button>
       <button data-view="adi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>Lotes e adiantamentos</button>
       <button data-view="prej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Prejuízos</button>
@@ -1149,6 +1186,36 @@ try { document.documentElement.dataset.tema =
     </section>
 
     <!-- LANÇAMENTOS -->
+    <section class="view hide" id="view-conf">
+      <div class="panel">
+        <div class="mn-ph"><h3>Rodada de conferência</h3>
+          <span class="bl-info" id="confInfo"></span></div>
+        <div class="cf-cfg">
+          <div class="field"><label for="cfData">Acrescentar data a conferir</label>
+            <span class="ibox"><input class="inp" id="cfData" type="date"></span></div>
+          <button class="btn sm" id="cfAddData">+ Acrescentar</button>
+          <div class="field"><label for="cfPrazo">Prazo para responder</label>
+            <span class="ibox"><input class="inp" id="cfPrazo" type="date"></span></div>
+          <button class="btn sm primary" id="cfGerar">Gerar link</button>
+          <button class="btn sm ghost" id="cfNova">Nova rodada</button>
+        </div>
+        <div class="cf-chips" id="cfChips"></div>
+        <div class="cf-link hide" id="cfLinkBox">
+          <code id="cfLink"></code>
+          <button class="btn sm" id="cfCopiar">Copiar</button>
+          <button class="btn sm" id="cfZap">WhatsApp</button>
+        </div>
+      </div>
+
+      <div class="cf-abas" id="cfAbas">
+        <button class="on" data-cfaba="resp">Respostas recebidas <span class="pip" id="pipResp">0</span></button>
+        <button data-cfaba="pend">Pendente de confirmação <span class="pip" id="pipPend">0</span></button>
+        <button data-cfaba="sem">Ainda não responderam <span class="pip" id="pipSem">0</span></button>
+      </div>
+
+      <div class="panel" id="cfPainel"><div id="cfLista"></div></div>
+    </section>
+
     <section class="view flush hide" id="view-lanc">
       <div class="filters">
         <div class="field">
@@ -1482,7 +1549,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 09:35";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 10:17";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -1540,7 +1607,7 @@ const S = {
   rows: [], rec: [], adi: [], pagadores: [], ops: OPS_BASE.slice(), sel: new Set(), hist: [], log: [], users: [],
   sort: {k:'dataPagamento', dir:1}, sortRec: {k:'dataPrevista', dir:1}, sortAdi: {k:'dataAdiantada', dir:1},
   f: {...FILTROS_PADRAO}, fr: {q:'', pg:'', st:'Previsto', d1:'', d2:''},
-  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '', restAberto: '',
+  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '', restAberto: '', respostas: [], rodada: null, cfAba: 'resp',
   cfg: {autoAplicar: true}, chat: [], alias: {}, avisado: false,
   view: 'bal'
 };
@@ -1794,7 +1861,7 @@ const Local = {
   get(k){ try { const v = localStorage.getItem(k); if (v != null) return v; } catch(e){} return MEM[k] ?? null; },
   set(k,v){ MEM[k] = v; try { localStorage.setItem(k,v); } catch(e){} }
 };
-let fdb = null, fauth = null, unsubRows = null, unsubRec = null, unsubSaldo = null, unsubEstoque = null, unsubLim = null, unsubLotes = null, unsubOps = null, unsubVendas = null, unsubPrej = null, unsubAdi = null, unsubLog = null, unsubUsers = null;
+let fdb = null, fauth = null, unsubRows = null, unsubRec = null, unsubSaldo = null, unsubEstoque = null, unsubLim = null, unsubLotes = null, unsubOps = null, unsubVendas = null, unsubPrej = null, unsubAdi = null, unsubLog = null, unsubUsers = null, unsubResp = null, unsubRodada = null;
 
 const Repo = {
   async escutar(){
@@ -1828,6 +1895,17 @@ const Repo = {
       unsubPrej && unsubPrej();
       unsubPrej = fdb.collection('prejuizos').onSnapshot(s => {
         S.prejuizos = s.docs.map(d => normalizePrejuizo({id:d.id, ...d.data()})); renderAll();
+      }, () => {});
+      unsubResp && unsubResp();
+      unsubResp = fdb.collection('respostas').onSnapshot(s => {
+        S.respostas = s.docs.map(d => normalizeResposta({id:d.id, ...d.data()}))
+          .sort((a,b) => b.enviadaEm - a.enviadaEm);
+        renderAll();
+      }, () => {});
+      unsubRodada && unsubRodada();
+      unsubRodada = fdb.collection('conferencias').orderBy('criadaEm','desc').limit(1).onSnapshot(s => {
+        S.rodada = s.docs.length ? {id:s.docs[0].id, ...s.docs[0].data()} : null;
+        renderAll();
       }, () => {});
       unsubVendas && unsubVendas();
       unsubVendas = fdb.collection('vendas').onSnapshot(s => {
@@ -1882,6 +1960,8 @@ const Repo = {
       catch(e){ S.operacoes = {cores:{}, extras:[]}; }
       try { S.vendas = (JSON.parse(Local.get('tesouraria:vendas') || '[]') || []).map(normalizeVenda); }
       catch(e){ S.vendas = []; }
+      try { S.respostas = (JSON.parse(Local.get('tesouraria:respostas') || '[]') || []).map(normalizeResposta); } catch(e){}
+      try { S.rodada = JSON.parse(Local.get('tesouraria:rodada') || 'null'); } catch(e){}
       try { S.prejuizos = (JSON.parse(Local.get('tesouraria:prejuizos') || '[]') || []).map(normalizePrejuizo); }
       catch(e){ S.prejuizos = []; }
       const rawAdi = Local.get('tesouraria:adi');
@@ -2187,7 +2267,7 @@ function fillSelects(){
 }
 function renderAll(){
   [['filtros',fillSelects], ['painel',renderDash], ['lançamentos',renderTable], ['recebimentos',renderRec],
-   ['adiantamentos',renderAdi], ['lotes',renderLotes], ['vendas',renderVendas], ['prejuízos',renderPrejuizos], ['balanço',renderBalanco]].forEach(([nome, fn]) => {
+   ['adiantamentos',renderAdi], ['lotes',renderLotes], ['vendas',renderVendas], ['prejuízos',renderPrejuizos], ['conferência',renderConferencia], ['balanço',renderBalanco]].forEach(([nome, fn]) => {
     try { fn(); } catch(e){ mostrarErro(`ao montar ${nome}`, e); }
   });
   if (S.view === 'mensal' || S.view === 'bal') Mensal.render();
@@ -2758,6 +2838,18 @@ function normalizeConta(c){
     companhia: nomeCia(c.companhia), obs:String(c.obs ?? '')};
 }
 const valorDaConta = c => c.valorManual ? c.valor : fromCents(Math.round(toCents(c.milheiro) * c.milhas / 1000));
+/** uma resposta de investidor, como chega do link público */
+function normalizeResposta(o){
+  const valores = {};
+  Object.entries(o.valores || {}).forEach(([d, v]) => valores[d] = Math.round(parseNum(v) * 100) / 100);
+  return {id:o.id, rodada:String(o.rodada ?? ''), nome:String(o.nome ?? '').trim(),
+    valores, chave:String(o.chave ?? '').trim(), tipoChave:String(o.tipoChave ?? '').trim(),
+    enviadaEm: Number(o.enviadaEm) || 0, repetida: !!o.repetida, correcao: String(o.correcao ?? ''),
+    situacao: String(o.situacao ?? 'nova'), motivo: String(o.motivo ?? ''),
+    contribuinte: String(o.contribuinte ?? ''),
+    conferidaEm: Number(o.conferidaEm) || 0, conferidaPor: String(o.conferidaPor ?? '')};
+}
+
 function normalizePrejuizo(o){
   // casos antigos guardavam um milheiro só, no caso; as contas sem milheiro herdam esse valor
   const heranca = Math.round(parseNum(o.milheiro)*100)/100;
@@ -3131,10 +3223,11 @@ function go(v){
   S.view = v;
   $$('#nav button[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === v));
   // o Painel deixou de ser uma tela própria: ele é a segunda metade do Controle mensal
-  ['bal','mensal','lanc','rec','adi','est','prej','log','users','bkp'].forEach(x => $('#view-'+x).classList.toggle('hide', x !== v));
+  ['bal','mensal','lanc','conf','rec','adi','est','prej','log','users','bkp'].forEach(x => $('#view-'+x).classList.toggle('hide', x !== v));
   const t = {dash:['Controle mensal','Entradas e saídas do mês, com o painel consolidado'],
              mensal:['Fluxo de caixa','Movimento do mês e projeção diária — valores previstos, não realizados'],
              lanc:['Pagamentos','Contas a pagar — edite na grade, filtre e trabalhe em lote'],
+             conf:['Conferência de valores','Envie um link, receba o que cada um espera e compare com o sistema'],
              adi:['Lotes e adiantamentos','Lotes gerados e fila de pagamentos antecipados'],
              bal:['Visão geral','Posição contratual, estoque e projeção — não representa saldo bancário'],
              rec:['Recebimentos','Contas a receber — previsões e entradas confirmadas, por pagador'],
@@ -3151,6 +3244,77 @@ function go(v){
   renderAll();
 }
 $('#nav').addEventListener('click', e => { const b = e.target.closest('button[data-view]'); if (b) go(b.dataset.view); });
+
+/* ---------- conferência de valores ---------- */
+$('#cfAddData').addEventListener('click', async () => {
+  const d = $('#cfData').value;
+  if (!d) return toast('Escolha uma data.');
+  const r = Conferencia.rodada();
+  if (r.datas.includes(d)) return toast('Essa data já está na rodada.');
+  await gravarRodada({...r, datas:[...r.datas, d], prazo: $('#cfPrazo').value || r.prazo});
+  $('#cfData').value = '';
+});
+$('#cfPrazo').addEventListener('change', async () => {
+  const r = Conferencia.rodada();
+  if (r.id) await gravarRodada({...r, prazo: $('#cfPrazo').value});
+});
+$('#cfGerar').addEventListener('click', async () => {
+  const r = Conferencia.rodada();
+  if (!r.datas.length) return toast('Acrescente ao menos uma data.');
+  await gravarRodada({...r, prazo: $('#cfPrazo').value || r.prazo});
+  toast('Link pronto — copie e envie aos investidores.');
+});
+$('#cfNova').addEventListener('click', async () => {
+  if (!confirm('Abrir uma rodada nova? As respostas da rodada atual continuam guardadas, mas a tela passa a mostrar a nova.')) return;
+  S.rodada = null;
+  await gravarRodada({datas:[], prazo:''});
+});
+$('#cfCopiar').addEventListener('click', () => {
+  const l = linkDaRodada(); if (!l) return;
+  navigator.clipboard ? navigator.clipboard.writeText(l).then(() => toast('Link copiado')) : toast(l);
+});
+$('#cfZap').addEventListener('click', () => {
+  const r = Conferencia.rodada(), l = linkDaRodada(); if (!l) return;
+  const txt = `Olá! Precisamos da sua conferência dos valores a receber ${r.datas.length > 1 ? 'nas datas' : 'na data'} `
+    + r.datas.map(fmtDate).join(', ') + (r.prazo ? `. Prazo para responder: ${fmtDate(r.prazo)}` : '') + `\n${l}`;
+  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+});
+$('#cfAbas').addEventListener('click', e => {
+  const b = e.target.closest('[data-cfaba]');
+  if (b){ S.cfAba = b.dataset.cfaba; renderConferencia(); }
+});
+$('#view-conf').addEventListener('click', async e => {
+  const del = e.target.closest('[data-cfdel]');
+  if (del){
+    const r = Conferencia.rodada();
+    return gravarRodada({...r, datas: r.datas.filter(d => d !== del.dataset.cfdel)});
+  }
+  const ver = e.target.closest('[data-cfver]');
+  if (ver) return abrirConferencia(ver.dataset.cfver);
+});
+document.addEventListener('click', async e => {
+  if (e.target.closest('[data-fecharmodal]')) return fecharModal();
+  const esc2 = e.target.closest('[data-cfescolher]');
+  if (esc2){
+    const [id, nome] = esc2.dataset.cfescolher.split('|');
+    const x = S.respostas.find(r => r.id === id);
+    if (x){ await gravarResposta({...x, contribuinte:nome}); fecharModal(); setTimeout(() => abrirConferencia(id), 60); }
+    return;
+  }
+  const apr = e.target.closest('[data-cfaprovar]');
+  if (apr){
+    const [id, nome] = apr.dataset.cfaprovar.split('|');
+    fecharModal();
+    return aprovarResposta(id, nome);
+  }
+  const pnd = e.target.closest('[data-cfpend]');
+  if (pnd){
+    const id = pnd.dataset.cfpend;
+    const motivo = prompt('Por que está pendente? (aparece na aba Pendente de confirmação)') || '';
+    fecharModal();
+    return marcarPendente(id, motivo);
+  }
+});
 
 /* ---------- menu inferior do celular ---------- */
 const NA_BARRA = ['bal','mensal','lanc','rec','adi'];
@@ -6080,6 +6244,303 @@ async function gravarEstoque(itens){
   renderAll();
   return true;
 }
+
+/* =========================================================
+   CONFERÊNCIA DE VALORES
+   ========================================================= */
+/** tira acento, pontuação e sobra só as palavras em minúsculas */
+function pedacos(nome){
+  return String(nome || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z\s]/g,' ').split(/\s+/).filter(x => x.length > 1);
+}
+/** palavras que não ajudam a distinguir uma pessoa da outra */
+const LIGACAO = new Set(['de','da','do','dos','das','e']);
+
+/** quão parecidas são duas palavras (0 a 1), tolerando uma letra trocada ou a mais */
+function parecencia(a, b){
+  if (a === b) return 1;
+  const [g, p] = a.length >= b.length ? [a, b] : [b, a];
+  if (g.length - p.length > 2) return 0;
+  // distância de edição simples
+  let linha = Array.from({length: p.length + 1}, (_, i) => i);
+  for (let i = 1; i <= g.length; i++){
+    let ant = linha[0]; linha[0] = i;
+    for (let j = 1; j <= p.length; j++){
+      const tmp = linha[j];
+      linha[j] = Math.min(linha[j] + 1, linha[j-1] + 1, ant + (g[i-1] === p[j-1] ? 0 : 1));
+      ant = tmp;
+    }
+  }
+  const dist = linha[p.length];
+  const limite = g.length <= 4 ? 1 : 2;
+  return dist > limite ? 0 : 1 - dist / g.length;
+}
+
+/** nota de 0 a 1 entre o nome informado e o nome cadastrado */
+function notaNome(informado, cadastrado){
+  const a = pedacos(informado).filter(x => !LIGACAO.has(x));
+  const b = pedacos(cadastrado).filter(x => !LIGACAO.has(x));
+  if (!a.length || !b.length) return 0;
+  let soma = 0, usados = new Set();
+  a.forEach(pa => {
+    let melhor = 0, qual = -1;
+    b.forEach((pb, i) => { if (usados.has(i)) return;
+      const n = parecencia(pa, pb); if (n > melhor){ melhor = n; qual = i; } });
+    if (qual >= 0 && melhor > 0){ usados.add(qual); soma += melhor; }
+  });
+  const cobertura = soma / Math.max(a.length, b.length);
+  // o primeiro nome pesa: se ele não casa com nada, a chance de ser outra pessoa é grande
+  const primeiro = Math.max(0, ...b.map(pb => parecencia(a[0], pb)));
+  return cobertura * 0.75 + primeiro * 0.25;
+}
+
+/** só os dígitos, para comparar chave de CPF, CNPJ e telefone */
+const soDigitos = s => String(s || '').replace(/\D/g,'');
+/** duas chaves Pix são a mesma coisa? */
+function mesmaChave(a, b){
+  const x = String(a || '').trim().toLowerCase(), y = String(b || '').trim().toLowerCase();
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const dx = soDigitos(x), dy = soDigitos(y);
+  return !!dx && dx.length >= 10 && dx === dy;
+}
+
+const Conferencia = {
+  /** a rodada aberta, ou uma rodada vazia */
+  rodada(){ return S.rodada || {id:'', datas:[], prazo:'', criadaEm:0}; },
+
+  /** contribuintes com lançamento em aberto nas datas da rodada */
+  candidatos(){
+    const datas = new Set(this.rodada().datas);
+    const mapa = new Map();
+    S.rows.filter(r => datas.has(r.dataPagamento)).forEach(r => {
+      const k = String(r.contribuinte || '').trim();
+      if (!k) return;
+      const x = mapa.get(k.toLowerCase()) || {nome:k, chave:r.pix || '', tipo:r.tipoPix || '', linhas:[], porData:{}};
+      x.linhas.push(r);
+      x.porData[r.dataPagamento] = (x.porData[r.dataPagamento] || 0) + r.valor;
+      if (!x.chave && r.pix) { x.chave = r.pix; x.tipo = r.tipoPix || ''; }
+      mapa.set(k.toLowerCase(), x);
+    });
+    return [...mapa.values()];
+  },
+
+  /** lista de candidatos ordenada pela semelhança com o que a pessoa escreveu */
+  ranking(resposta){
+    return this.candidatos().map(c => {
+      const nota = notaNome(resposta.nome, c.nome);
+      const chaveIgual = mesmaChave(resposta.chave, c.chave);
+      return {...c, nota, chaveIgual, peso: nota + (chaveIgual ? 0.6 : 0)};
+    }).sort((a,b) => b.peso - a.peso);
+  },
+
+  /** o candidato certo, quando não há dúvida razoável */
+  escolhido(resposta){
+    if (resposta.contribuinte){
+      const fixo = this.candidatos().find(c => c.nome.toLowerCase() === resposta.contribuinte.toLowerCase());
+      if (fixo) return {...fixo, nota:1, chaveIgual: mesmaChave(resposta.chave, fixo.chave), manual:true};
+    }
+    const r = this.ranking(resposta);
+    if (!r.length) return null;
+    const primeiro = r[0], segundo = r[1];
+    const claro = primeiro.peso >= 1.2 || (primeiro.nota >= 0.82 && (!segundo || primeiro.peso - segundo.peso >= 0.25));
+    return claro ? primeiro : null;
+  },
+
+  /** compara data a data o que a pessoa informou com o que o sistema tem */
+  comparar(resposta, cand){
+    const datas = this.rodada().datas;
+    return datas.map(d => {
+      const dito = Math.round(parseNum((resposta.valores || {})[d]) * 100) / 100;
+      const sistema = cand ? Math.round((cand.porData[d] || 0) * 100) / 100 : 0;
+      return {data:d, dito, sistema, bate: toCents(dito) === toCents(sistema)};
+    });
+  }
+};
+
+/* ---------- gravação e tela da conferência ---------- */
+async function gravarRodada(dados){
+  const r = {datas:[...new Set(dados.datas || [])].sort(), prazo:dados.prazo || '',
+    criadaEm: dados.criadaEm || Date.now(), criadaPor: dados.criadaPor || APP.nome || 'Local', aberta:true};
+  if (APP.modo === 'nuvem'){
+    try {
+      if (dados.id) await fdb.collection('conferencias').doc(dados.id).set(r);
+      else { const ref = await fdb.collection('conferencias').add(r); r.id = ref.id; }
+    } catch(e){ toast('Não consegui gravar a rodada: ' + (e.code || e.message)); return null; }
+  }
+  S.rodada = {...r, id: dados.id || r.id || 'local-' + uid()};
+  if (APP.modo !== 'nuvem') Local.set('tesouraria:rodada', JSON.stringify(S.rodada));
+  renderConferencia();
+  return S.rodada;
+}
+
+async function gravarResposta(resp){
+  const dados = {...resp};
+  delete dados.id;
+  if (APP.modo === 'nuvem'){
+    try { await fdb.collection('respostas').doc(resp.id).set(dados, {merge:true}); }
+    catch(e){ toast('Não consegui gravar: ' + (e.code || e.message)); return false; }
+  } else {
+    S.respostas = S.respostas.map(x => x.id === resp.id ? resp : x);
+    Local.set('tesouraria:respostas', JSON.stringify(S.respostas));
+  }
+  return true;
+}
+
+/** aprovar marca a caixinha em todos os lançamentos da pessoa nas datas da rodada */
+async function aprovarResposta(id, nomeContribuinte){
+  const resp = S.respostas.find(r => r.id === id); if (!resp) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  const cand = Conferencia.candidatos().find(c => c.nome === nomeContribuinte)
+    || Conferencia.escolhido(resp);
+  if (!cand) return toast('Escolha primeiro a qual contribuinte a resposta pertence.');
+  const alvos = cand.linhas.map(r => r.id);
+  await validarLancamentos(alvos, true);
+  await gravarResposta({...resp, situacao:'aprovada', contribuinte:cand.nome,
+    conferidaEm:Date.now(), conferidaPor:APP.nome || 'Local'});
+  await Repo.registrar({ts:Date.now(), uid:APP.uid || 'local', nome:APP.nome || 'Local', origem:'manual',
+    label:'conferência aprovada', tela:'conf',
+    resumo:[`${cand.nome} · ${alvos.length} lançamento(s) validado(s)`], total:alvos.length});
+  toast(`${cand.nome}: ${alvos.length} lançamento(s) validado(s).`);
+  renderAll();
+}
+
+async function marcarPendente(id, motivo){
+  const resp = S.respostas.find(r => r.id === id); if (!resp) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  await gravarResposta({...resp, situacao:'pendente', motivo: motivo || '',
+    conferidaEm:Date.now(), conferidaPor:APP.nome || 'Local'});
+  await Repo.registrar({ts:Date.now(), uid:APP.uid || 'local', nome:APP.nome || 'Local', origem:'manual',
+    label:'conferência pendente', tela:'conf', resumo:[`${resp.nome} · ${motivo || 'sem motivo'}`], total:1});
+  toast('Marcada como pendente de confirmação.');
+  renderAll();
+}
+
+function linkDaRodada(){
+  const r = Conferencia.rodada();
+  if (!r.id) return '';
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+  return base + 'conferencia.html?r=' + encodeURIComponent(r.id);
+}
+
+function renderConferencia(){
+  if (!$('#cfLista')) return;
+  const r = Conferencia.rodada();
+  $('#confInfo').textContent = r.id
+    ? `aberta por ${esc(r.criadaPor || '—')} em ${hora(r.criadaEm)}`
+    : 'nenhuma rodada aberta';
+  $('#cfChips').innerHTML = r.datas.length
+    ? r.datas.map(d => `<span class="cf-chip">${fmtDate(d)}<button data-cfdel="${d}" title="Tirar esta data">✕</button></span>`).join('')
+    : '<span class="cf-vazio">Acrescente ao menos uma data para gerar o link.</span>';
+  $('#cfPrazo').value = r.prazo || '';
+  const link = linkDaRodada();
+  $('#cfLinkBox').classList.toggle('hide', !link);
+  if (link) $('#cfLink').textContent = link;
+
+  const lista = S.respostas.filter(x => x.rodada === r.id);
+  const aba = S.cfAba || 'resp';
+  const resp = lista.filter(x => x.situacao !== 'pendente');
+  const pend = lista.filter(x => x.situacao === 'pendente');
+  const responderam = new Set(lista.map(x => (x.contribuinte || '').toLowerCase()).filter(Boolean));
+  const sem = Conferencia.candidatos().filter(c => !responderam.has(c.nome.toLowerCase()));
+  $('#pipResp').textContent = resp.length;
+  $('#pipPend').textContent = pend.length;
+  $('#pipSem').textContent = sem.length;
+  $$('#cfAbas button').forEach(b => b.classList.toggle('on', b.dataset.cfaba === aba));
+
+  if (aba === 'sem'){
+    $('#cfLista').innerHTML = !r.id ? '<div class="empty">Gere uma rodada primeiro.</div>'
+      : sem.length ? `<table class="pl-tab"><thead><tr><th>Contribuinte</th><th class="num">A receber nas datas</th><th>Chave no sistema</th></tr></thead>
+        <tbody>${sem.map(c => `<tr><td><b>${esc(c.nome)}</b></td>
+          <td class="num">${brl(Object.values(c.porData).reduce((s,v) => s+v, 0))}</td>
+          <td>${esc(c.chave || '—')}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="empty">Todos os contribuintes das datas já responderam.</div>';
+    return;
+  }
+
+  const alvo = aba === 'pend' ? pend : resp;
+  if (!alvo.length){
+    $('#cfLista').innerHTML = aba === 'pend'
+      ? '<div class="empty">Nada pendente de confirmação.</div>'
+      : '<div class="empty">Nenhuma resposta recebida ainda. Envie o link aos investidores.</div>';
+    return;
+  }
+
+  $('#cfLista').innerHTML = `<table class="pl-tab cf-tab">
+    <thead><tr><th>Quem respondeu</th>
+      ${r.datas.map(d => `<th class="num">${fmtDate(d).slice(0,5)}</th>`).join('')}
+      <th>Chave Pix</th><th></th></tr></thead>
+    <tbody>${alvo.map(x => {
+      const cand = Conferencia.escolhido(x);
+      const cmp = Conferencia.comparar(x, cand);
+      const chaveOk = cand && mesmaChave(x.chave, cand.chave);
+      return `<tr>
+        <td><b>${esc(x.nome)}</b>
+          <span class="cf-meta">${hora(x.enviadaEm)}${cand ? ' · ' + esc(cand.nome) : ''}
+            ${!cand ? '<span class="cf-tag cf-duvida">quem é?</span>' : ''}
+            ${x.repetida ? '<span class="cf-tag cf-rep">tentou responder de novo</span>' : ''}
+            ${x.correcao ? '<span class="cf-tag cf-rep">pediu correção</span>' : ''}</span></td>
+        ${cmp.map(c => `<td class="num"><span class="${!cand ? 'cf-neutro' : c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.dito)}
+          ${!cand || c.bate ? '' : `<small>sistema: ${brl(c.sistema)}</small>`}</span></td>`).join('')}
+        <td><span class="${!cand ? 'cf-neutro' : chaveOk ? 'cf-ok' : 'cf-dif'}">${esc(x.tipoChave || '—')}${x.chave ? ' · ' + esc(x.chave) : ''}
+          ${chaveOk || !cand ? '' : `<small>sistema: ${esc(cand.chave || 'sem chave')}</small>`}</span></td>
+        <td class="num"><button class="btn sm primary" data-cfver="${x.id}">Conferir</button></td></tr>`;
+    }).join('')}</tbody></table>`;
+}
+
+/** a janela que compara resposta e sistema, e resolve a dúvida de quem é a pessoa */
+function abrirConferencia(id){
+  const x = S.respostas.find(r => r.id === id); if (!x) return;
+  const r = Conferencia.rodada();
+  const cand = Conferencia.escolhido(x);
+  if (!cand){
+    const opcoes = Conferencia.ranking(x).slice(0, 5);
+    return abrirModal(`<h3>Qual destes é a pessoa?</h3>
+      <p class="sub">O nome informado foi <b>${esc(x.nome)}</b>${x.chave ? ` e a chave <b>${esc(x.chave)}</b>` : ''}.
+        Escolha o contribuinte correspondente.</p>
+      ${opcoes.length ? `<div class="cf-ops">${opcoes.map(c => `<button class="cf-op" data-cfescolher="${x.id}|${esc(c.nome)}">
+        <b>${esc(c.nome)}</b><span>${brl(Object.values(c.porData).reduce((s,v) => s+v, 0))} nas datas ·
+        ${c.linhas.length} lançamento(s)${c.chaveIgual ? ' · chave igual à informada' : c.chave ? ' · chave: ' + esc(c.chave) : ''}</span></button>`).join('')}</div>`
+        : '<div class="empty">Nenhum contribuinte com pagamento nas datas desta rodada.</div>'}
+      <div class="modal-pe"><button class="btn" data-fecharmodal>Nenhum destes</button>
+        <button class="btn" data-cfpend="${x.id}">Marcar como pendente</button></div>`);
+  }
+  const cmp = Conferencia.comparar(x, cand);
+  const chaveOk = mesmaChave(x.chave, cand.chave);
+  const problemas = cmp.filter(c => !c.bate).length + (chaveOk ? 0 : 1);
+  abrirModal(`<h3>Conferência de ${esc(cand.nome)}</h3>
+    <p class="sub">${esc(x.nome)} respondeu em ${hora(x.enviadaEm)}.
+      ${problemas ? `<b class="cf-dif-txt">${problemas} ponto(s) fora.</b>` : '<b class="cf-ok-txt">Tudo bate.</b>'}</p>
+    <table class="pl-tab">
+      <thead><tr><th>Data</th><th class="num">Informou</th><th class="num">No sistema</th></tr></thead>
+      <tbody>${cmp.map(c => `<tr><td>${fmtDate(c.data)}</td><td class="num">${brl(c.dito)}</td>
+        <td class="num"><span class="${c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.sistema)}</span></td></tr>`).join('')}
+        <tr><td>Chave Pix</td><td class="num">${esc(x.tipoChave || '—')} ${esc(x.chave || '')}</td>
+          <td class="num"><span class="${chaveOk ? 'cf-ok' : 'cf-dif'}">${chaveOk ? 'igual' : esc(cand.chave || 'sem chave')}</span></td></tr>
+      </tbody></table>
+    ${x.correcao ? `<div class="cf-aviso">Pediu correção: ${esc(x.correcao)}</div>` : ''}
+    ${x.repetida ? '<div class="cf-aviso">Tentou responder mais de uma vez — só a primeira resposta vale.</div>' : ''}
+    <p class="sub">Ao aprovar, a caixinha <b>“valor validado com o contribuinte”</b> é marcada
+      nos ${cand.linhas.length} lançamento(s) dele nas datas da rodada.</p>
+    <div class="modal-pe"><button class="btn" data-fecharmodal>Fechar</button>
+      <button class="btn" data-cfpend="${x.id}">Marcar como pendente</button>
+      <button class="btn primary" data-cfaprovar="${x.id}|${esc(cand.nome)}">Aprovar e validar</button></div>`);
+}
+
+/** uma janela simples, reaproveitada pela conferência */
+function abrirModal(html){
+  let f = $('#cfModal');
+  if (!f){
+    f = document.createElement('div');
+    f.id = 'cfModal'; f.className = 'cf-fundo';
+    f.innerHTML = '<div class="cf-modal"></div>';
+    document.body.appendChild(f);
+    f.addEventListener('click', e => { if (e.target === f) fecharModal(); });
+  }
+  f.querySelector('.cf-modal').innerHTML = html;
+  f.classList.add('on');
+}
+function fecharModal(){ const f = $('#cfModal'); if (f) f.classList.remove('on'); }
 
 /* ---------- os números do painel, na mecânica da planilha ---------- */
 Object.assign(Balanco, {

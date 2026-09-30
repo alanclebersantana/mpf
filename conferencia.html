@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-tema="claro"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conferência de valores — Milhas Plus</title>
+<meta name="theme-color" content="#10233F">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+:root{--bg:#F2F5F8;--surface:#fff;--surface-2:#F4F7FA;--line:#DCE3EB;--line-soft:#EDF1F6;
+ --text:#18202B;--muted:#5B6775;--muted-2:#8B96A3;--nav:#10233F;--accent:#C1561A;--accent-2:#B5501B;
+ --accent-dim:#FBEDE4;--ok:#2C8258;--ok-dim:#E4F2EA;--bad:#B03C34;--bad-dim:#FBEAE8;--warn-dim:#FBF1DC;--r:12px}
+*{box-sizing:border-box;margin:0;padding:0}
+button{font:inherit;border:none;background:none;cursor:pointer;color:inherit}
+input,select{font:inherit;color:inherit}
+body{background:var(--bg);font:15px/1.5 Nunito,system-ui,sans-serif;color:var(--text);
+  font-variant-numeric:tabular-nums;padding-bottom:env(safe-area-inset-bottom,0px)}
+.topo{background:var(--nav);color:#fff;padding:calc(15px + env(safe-area-inset-top,0px)) 18px 15px;display:flex;gap:12px;align-items:center}
+.topo img{width:36px;height:36px;border-radius:9px}
+.topo b{display:block;font-size:15.5px}
+.topo span{font-size:11.5px;color:#A9BBD4}
+.corpo{max-width:560px;margin:0 auto;padding:16px}
+.cartao{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;margin-bottom:12px}
+.cartao h1{font-size:17px;font-weight:800;margin-bottom:5px}
+.cartao p.ex{font-size:13.5px;color:var(--muted);margin-bottom:16px}
+.f{margin-bottom:13px}
+.f label{display:block;font-size:11.5px;font-weight:800;color:var(--muted-2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:5px}
+.f input,.f select{width:100%;height:48px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:16px}
+.f input:focus,.f select:focus{outline:none;border-color:var(--accent);background:var(--accent-dim)}
+.f .eco{font-size:12px;color:var(--muted-2);font-weight:700;margin-top:5px;min-height:16px}
+.f .erro{color:var(--bad);font-size:12.5px;font-weight:700;margin-top:6px;display:none}
+.f.ruim input{border-color:var(--bad);background:var(--bad-dim)}
+.f.ruim .erro{display:block}
+.duas{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.data-l{background:var(--surface-2);border:1px solid var(--line-soft);border-radius:11px;padding:12px;margin-bottom:10px}
+.data-l .dt{font-size:12.5px;font-weight:800;color:var(--accent-2);margin-bottom:8px}
+.bt-grande{width:100%;height:52px;border-radius:11px;background:var(--accent);color:#fff;font-size:15.5px;font-weight:800}
+.bt-grande:disabled{opacity:.6}
+.bt-leve{width:100%;height:48px;border-radius:11px;background:var(--surface-2);border:1px solid var(--line);font-weight:700;margin-top:10px}
+.rodape{text-align:center;font-size:11.5px;color:var(--muted-2);padding:4px 0 20px}
+.ok-grande{text-align:center;padding:12px 0 2px}
+.ok-grande .circ{width:64px;height:64px;border-radius:50%;background:var(--ok-dim);color:var(--ok);
+  display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:32px;font-weight:800}
+.resumo{background:var(--surface-2);border-radius:10px;padding:13px;margin-top:14px;font-size:13.5px}
+.resumo div{display:flex;justify-content:space-between;gap:10px;padding:5px 0}
+.resumo div + div{border-top:1px solid var(--line-soft)}
+.aviso{background:var(--warn-dim);border:1px solid #EEDCB4;border-radius:10px;padding:13px;font-size:13.5px;color:#6E4E10;margin-top:12px}
+.aviso b{display:block;margin-bottom:3px}
+.erro-topo{background:var(--bad-dim);border:1px solid #F0CFCB;border-radius:10px;padding:13px;font-size:13.5px;color:var(--bad);margin-bottom:12px}
+.carregando{text-align:center;color:var(--muted-2);padding:40px 0}
+.fundo{position:fixed;inset:0;background:rgba(10,16,26,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:60}
+.fundo.on{display:flex}
+.modal{background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%}
+.modal h3{font-size:16.5px;font-weight:800;margin-bottom:8px}
+.modal p{font-size:13.5px;color:var(--muted);margin-bottom:18px}
+.modal .pe{display:flex;gap:9px;flex-direction:column}
+.modal .pe button{height:48px;border-radius:11px;font-weight:800;font-size:14.5px}
+.modal .pe .sim{background:var(--accent);color:#fff}
+.modal .pe .nao{background:var(--surface-2);border:1px solid var(--line)}
+.hide{display:none !important}
+</style></head><body>
+
+<div class="topo"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFgAAABYCAMAAABGS8AGAAAAYFBMVEX03VgDJSqVnVNWaTopSTQAAABnrqxic0r3lB0qXVr57l/13lh3hEbHvE/8/Ab03ld1wL55xMKhcCP/vz//fwD/f3//qlV/f38AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABuDXH5AAAAGHRSTlP+/////wD/////EaX//wFf////BAICAwJQRH6XAAADxUlEQVR42u2Za3ekIAyGJQnFu9tO2/3//3S5qRCCtR09+6U5p6fjDDy+hhCINLofmmdtGJZea+3+Nmsu4Ab4Mus5QTcXcZ0tqejmSht63c93gJ3o+e8t4GaY9cctYOuO+f0WcDM8PudbwM2gHwyMqmKY90zbEcJUjmCfgUnVLe1X/EjAyL2dKfsVWGUgGmaaMW03IgnoQX/qtAPVvJb9RMwzk3HokTvjFNgU4BHz3/k4nASXipXKHn4iRu5/6ApgYD/ymHn5EAzRdwUY8ziJ5PRegisAEq5SkwTmAxij8BDswicEvefK4KAOgT1ecreFg2GbUWafdAxswN+PmD8wqIhO5uBJmswc7K9XheMqdFKCg/beICSJUvG4CbYPRsdxtX09AbLkI828GHEmGbMyCIveeAhWftQIGdf54gvwqpgqYGumCf7NBpBEJ68+TvNtHezFAUuoB2DXNPTEOhjbNwyOIsqmFNbBo9r0RFUiuG3fNk8BJe3qrqDtOekQ3LYYyJiNRR08TRATFW1DJINbv7CASkLhAEwqrD1RCh6BHRkazFYtGezSoRsKtWWN8RDc7k5owN2gqthxbdvoAsCxOQa/BTfYJTUse7VwU4HrY/lwBWkzybRN05rilfvl0tQmkkPoh9RcBUNl2SM289pEMuzzA+S86fMlSaay5AJps6yLkpNQnokPNm9YbzfKq/xkUDamAyrNDDS/9mu/9gObTn45ne58nARo4nXBqXrw6TovUVBJbt+v83i78atl4ht13tm927k6ryYA71H8n8CA94BBCJorwMDC0a/tF4DjxjstGuAKsN8Iwl5hYdgrPwvGwIWNbIHGfobxSbCK3JXsuY5MT4HHnRvIkevIT4Eh4Xqy3SablczBgJS8YbLVhd9vymCbDrskVXmdEUzCi5AkLLcNMtaqdAUymYMdtzPdXkV2Xef3nTLYtjAymYrKtHuxZtb8btxVx6bWkL/WEckF2HNf/gRYZz+sZBLfsUDu5Z3MwJ5kn/7l1QPtP3fh70PiWyHnZSOROfg1SI3Ct4vXKtitkxK5UOzHayV365XJwHpgsSyQy8FTGdHz+TKtez5LSj8refCiD9Kr1BWZ5JCPi6jjrtis88O2GuXgRUhGZPbZ3R2Ac8v2Hzr3cnyzkW1v6nVebCDWebqf+2IOIv2szkvrMXc+tAhbR1vS1+o3qNSDY7Z31Fo/9IUnWSl47ufhFrCe328g+xOneb7eG3olL7eAtZ0o/XAH2J9KLtehlx2se4u+7Gj20aRHvu7As+8v0L18zP8AmtYi63DWszMAAAAASUVORK5CYII=" alt="Milhas Plus">
+  <div><b>Milhas Plus</b><span>Conferência de valores a receber</span></div></div>
+
+<div class="corpo">
+  <div id="carregando" class="carregando">Carregando…</div>
+
+  <div id="tela-form" class="hide">
+    <div class="cartao">
+      <h1>Confirme o que você tem a receber</h1>
+      <p class="ex">Informe seu nome completo e o valor que você espera receber em cada data.
+        Depois conferimos com o nosso sistema.</p>
+      <div class="f" id="fNome">
+        <label for="nome">Nome completo</label>
+        <input id="nome" autocomplete="name" placeholder="nome e sobrenome">
+        <div class="erro" id="erroNome">Informe o nome completo, com sobrenome.</div>
+      </div>
+      <div id="datas"></div>
+      <div class="duas">
+        <div class="f"><label for="tipoChave">Tipo de chave</label>
+          <select id="tipoChave"><option>CPF</option><option>CNPJ</option><option>Telefone</option><option>E-mail</option><option>Aleatória</option></select></div>
+        <div class="f" id="fChave"><label for="chave">Chave Pix</label>
+          <input id="chave" placeholder="sua chave">
+          <div class="erro">Informe a chave Pix.</div></div>
+      </div>
+      <button class="bt-grande" id="btConfirmar">Confirmar</button>
+    </div>
+    <div class="rodape" id="rodapePrazo"></div>
+  </div>
+
+  <div id="tela-ok" class="hide">
+    <div class="cartao">
+      <div class="ok-grande"><div class="circ">✓</div>
+        <h1>Recebemos sua confirmação</h1>
+        <p class="ex">O financeiro vai conferir com o sistema. Você não precisa fazer mais nada.</p></div>
+      <div class="resumo" id="resumoEnvio"></div>
+      <button class="bt-leve" id="btCorrecao">Solicitar correção</button>
+      <div class="aviso hide" id="avisoCorrecao">
+        <b>Solicitação enviada ao financeiro.</b>
+        Sua resposta continua registrada como está. Alguém da equipe vai falar com você antes de qualquer alteração.</div>
+    </div>
+    <div class="rodape" id="rodapeEnvio"></div>
+  </div>
+
+  <div id="tela-repetida" class="hide">
+    <div class="cartao">
+      <div class="erro-topo" id="msgRepetida"></div>
+      <h1>Você já respondeu esta conferência</h1>
+      <p class="ex">Cada pessoa responde uma vez. Se precisa corrigir algum valor,
+        confirme seu nome abaixo e peça a correção — o financeiro entra em contato.</p>
+      <div class="f" id="fNomeCor">
+        <label for="nomeCor">Seu nome completo</label>
+        <input id="nomeCor" autocomplete="name" placeholder="nome e sobrenome">
+        <div class="erro">Informe o nome completo, com sobrenome.</div>
+      </div>
+      <div class="f"><label for="obsCor">O que precisa ser corrigido</label>
+        <input id="obsCor" placeholder="opcional"></div>
+      <button class="bt-grande" id="btPedirCorrecao">Solicitar correção</button>
+      <div class="aviso hide" id="avisoRepetida">
+        <b>Solicitação enviada ao financeiro.</b>
+        Sua resposta anterior continua valendo. Alguém da equipe vai falar com você.</div>
+    </div>
+  </div>
+
+  <div id="tela-erro" class="hide"><div class="cartao">
+    <h1 id="erroTitulo">Link inválido</h1>
+    <p class="ex" id="erroTexto">Confira o endereço com quem lhe enviou.</p></div></div>
+</div>
+
+<div class="fundo" id="mConferir"><div class="modal">
+  <h3>Você conferiu os valores?</h3>
+  <p>Depois de enviar, só o financeiro pode alterar. Revise os valores antes de confirmar.</p>
+  <div class="pe"><button class="sim" id="btSim">Sim, conferi</button>
+    <button class="nao" id="btNao">Voltar e revisar</button></div>
+</div></div>
+
+<script>
+const FIREBASE = {
+  apiKey: "AIzaSyBKnprcIRThfEmWJOV5GzKvkfYphacu2i0",
+  authDomain: "mpfianceiro.firebaseapp.com",
+  projectId: "mpfianceiro",
+  storageBucket: "mpfianceiro.firebasestorage.app",
+  messagingSenderId: "586707241027",
+  appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
+};
+const $ = s => document.querySelector(s);
+const mostra = id => ['carregando','tela-form','tela-ok','tela-repetida','tela-erro']
+  .forEach(x => $('#'+x).classList.toggle('hide', x !== id));
+
+const fmtData = d => { const [a,m,dd] = String(d).split('-'); return `${dd}/${m}/${a}`; };
+const DIAS = ['domingo','segunda','terça','quarta','quinta','sexta','sábado'];
+const diaSemana = d => DIAS[new Date(d + 'T12:00:00').getDay()];
+const brl = n => (Number(n) || 0).toLocaleString('pt-BR', {style:'currency', currency:'BRL'});
+function parseNum(v){
+  if (typeof v === 'number') return v;
+  let s = String(v ?? '').replace(/[^\d,.-]/g,'').trim();
+  if (!s) return 0;
+  if (s.includes(',')) s = s.replace(/\./g,'').replace(',','.');
+  // sem vírgula, pontos em grupos de três são separador de milhar: 120.000 é cento e vinte mil
+  else if (/^-?\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g,'');
+  const n = parseFloat(s);
+  return isNaN(n) ? 0 : n;
+}
+/** nome completo é nome mais pelo menos um sobrenome de verdade */
+function nomeCompleto(v){
+  const p = String(v || '').trim().split(/\s+/).filter(x => x.length > 1
+    || ['e','y'].includes(x.toLowerCase()));
+  const reais = p.filter(x => !['de','da','do','dos','das','e'].includes(x.toLowerCase()));
+  return reais.length >= 2;
+}
+const soDigitos = s => String(s || '').replace(/\D/g,'');
+function mesmaChave(a, b){
+  const x = String(a || '').trim().toLowerCase(), y = String(b || '').trim().toLowerCase();
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const dx = soDigitos(x), dy = soDigitos(y);
+  return !!dx && dx.length >= 10 && dx === dy;
+}
+function mesmoNome(a, b){
+  const limpa = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .toLowerCase().replace(/[^a-z\s]/g,' ').split(/\s+/).filter(x => x.length > 1
+      && !['de','da','do','dos','das','e'].includes(x)).sort().join(' ');
+  return !!limpa(a) && limpa(a) === limpa(b);
+}
+
+let fdb = null, rodada = null, enviada = null;
+
+(async function inicio(){
+  const id = new URLSearchParams(location.search).get('r');
+  if (!id){ mostra('tela-erro'); return; }
+  try {
+    firebase.initializeApp(FIREBASE);
+    fdb = firebase.firestore();
+    const doc = await fdb.collection('conferencias').doc(id).get();
+    if (!doc.exists){ mostra('tela-erro'); return; }
+    rodada = {id, ...doc.data()};
+    if (!(rodada.datas || []).length){
+      $('#erroTitulo').textContent = 'Conferência ainda não liberada';
+      $('#erroTexto').textContent = 'Nenhuma data foi definida. Fale com o financeiro.';
+      mostra('tela-erro'); return;
+    }
+    montarForm();
+    mostra('tela-form');
+  } catch(e){
+    $('#erroTitulo').textContent = 'Não consegui carregar';
+    $('#erroTexto').textContent = 'Verifique sua conexão e tente de novo. (' + (e.code || e.message) + ')';
+    mostra('tela-erro');
+  }
+})();
+
+function montarForm(){
+  $('#datas').innerHTML = rodada.datas.map(d => `
+    <div class="data-l"><div class="dt">${diaSemana(d)}, ${fmtData(d)}</div>
+      <div class="f" style="margin:0"><label for="v-${d}">Valor a receber</label>
+        <input id="v-${d}" data-data="${d}" inputmode="decimal" placeholder="0,00">
+        <div class="eco" id="eco-${d}"></div></div></div>`).join('');
+  document.querySelectorAll('#datas input').forEach(el => {
+    const eco = () => {
+      const alvo = document.getElementById('eco-' + el.dataset.data);
+      const v = parseNum(el.value);
+      alvo.textContent = el.value.trim() ? 'Entendi ' + brl(v) : '';
+    };
+    el.addEventListener('input', eco);
+    el.addEventListener('blur', () => { if (el.value.trim()) el.value = brl(parseNum(el.value)).replace('R$ ',''); eco(); });
+  });
+  $('#rodapePrazo').textContent = rodada.prazo ? 'Prazo para responder: ' + fmtData(rodada.prazo) : '';
+}
+
+$('#btConfirmar').addEventListener('click', () => {
+  let erro = false;
+  if (!nomeCompleto($('#nome').value)){ $('#fNome').classList.add('ruim'); erro = true; }
+  else $('#fNome').classList.remove('ruim');
+  if (!String($('#chave').value).trim()){ $('#fChave').classList.add('ruim'); erro = true; }
+  else $('#fChave').classList.remove('ruim');
+  if (erro){ (document.querySelector('.f.ruim input') || {}).focus?.(); return; }
+  $('#mConferir').classList.add('on');
+});
+$('#btNao').addEventListener('click', () => $('#mConferir').classList.remove('on'));
+
+$('#btSim').addEventListener('click', async () => {
+  $('#mConferir').classList.remove('on');
+  const bt = $('#btConfirmar'); bt.disabled = true; bt.textContent = 'Enviando…';
+  const nome = $('#nome').value.trim(), chave = $('#chave').value.trim();
+  const valores = {};
+  rodada.datas.forEach(d => valores[d] = parseNum($('#v-' + d).value));
+  try {
+    // quem já respondeu com o mesmo nome ou a mesma chave não responde de novo
+    const anteriores = await fdb.collection('respostas').where('rodada','==',rodada.id).get();
+    const igual = anteriores.docs.map(d => ({id:d.id, ...d.data()}))
+      .find(r => mesmoNome(r.nome, nome) || mesmaChave(r.chave, chave));
+    if (igual){
+      await fdb.collection('respostas').doc(igual.id).set({repetida:true}, {merge:true});
+      $('#msgRepetida').textContent = mesmaChave(igual.chave, chave)
+        ? 'Já recebemos uma resposta com esta chave Pix.'
+        : 'Já recebemos uma resposta com este nome.';
+      $('#nomeCor').value = nome;
+      enviada = igual;
+      mostra('tela-repetida');
+      return;
+    }
+    const doc = {rodada:rodada.id, nome, chave, tipoChave:$('#tipoChave').value,
+      valores, enviadaEm:Date.now(), situacao:'nova', repetida:false, correcao:''};
+    const ref = await fdb.collection('respostas').add(doc);
+    enviada = {id:ref.id, ...doc};
+    $('#resumoEnvio').innerHTML = rodada.datas.map(d =>
+      `<div><span>${fmtData(d)}</span><b>${brl(valores[d])}</b></div>`).join('')
+      + `<div><span>Chave Pix</span><b>${$('#tipoChave').value} · ${chave}</b></div>`;
+    $('#rodapeEnvio').textContent = 'Enviado em ' + new Date().toLocaleString('pt-BR');
+    mostra('tela-ok');
+  } catch(e){
+    bt.disabled = false; bt.textContent = 'Confirmar';
+    alert('Não consegui enviar: ' + (e.code || e.message) + '. Tente de novo.');
+  }
+});
+
+$('#btCorrecao').addEventListener('click', async () => {
+  $('#btCorrecao').classList.add('hide');
+  $('#avisoCorrecao').classList.remove('hide');
+  try { await fdb.collection('respostas').doc(enviada.id)
+    .set({correcao:'Pediu correção em ' + new Date().toLocaleString('pt-BR')}, {merge:true}); } catch(e){}
+});
+
+$('#btPedirCorrecao').addEventListener('click', async () => {
+  if (!nomeCompleto($('#nomeCor').value)){ $('#fNomeCor').classList.add('ruim'); return; }
+  $('#fNomeCor').classList.remove('ruim');
+  const bt = $('#btPedirCorrecao'); bt.disabled = true; bt.textContent = 'Enviando…';
+  try {
+    await fdb.collection('respostas').doc(enviada.id).set({
+      correcao: `${$('#nomeCor').value.trim()} pediu correção em ${new Date().toLocaleString('pt-BR')}`
+        + ($('#obsCor').value.trim() ? ': ' + $('#obsCor').value.trim() : '')
+    }, {merge:true});
+    bt.classList.add('hide');
+    $('#avisoRepetida').classList.remove('hide');
+  } catch(e){
+    bt.disabled = false; bt.textContent = 'Solicitar correção';
+    alert('Não consegui enviar: ' + (e.code || e.message));
+  }
+});
+</script>
+</body></html>
