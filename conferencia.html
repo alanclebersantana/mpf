@@ -79,8 +79,8 @@ body{background:var(--bg);font:15px/1.5 Nunito,system-ui,sans-serif;color:var(--
 
   <div id="tela-form" class="hide">
     <div class="cartao">
-      <h1>Confirme o que você tem a receber</h1>
-      <p class="ex">Informe seu nome completo e o valor que você espera receber em cada data.
+      <h1 id="tituloForm">Confirme o que você tem a receber</h1>
+      <p class="ex" id="explicaForm">Informe seu nome completo e o valor que você espera receber.
         Depois conferimos com o nosso sistema.</p>
       <div class="f" id="fNome">
         <label for="nome">Nome completo</label>
@@ -215,7 +215,8 @@ const nomeNormal = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f
 let fdb = null, rodada = null, enviada = null;
 
 (async function inicio(){
-  const id = new URLSearchParams(location.search).get('r');
+  const q = new URLSearchParams(location.search);
+  const id = q.get('r'), soData = q.get('d');
   if (!id){ mostra('tela-erro'); return; }
   try {
     firebase.initializeApp(FIREBASE);
@@ -223,6 +224,14 @@ let fdb = null, rodada = null, enviada = null;
     const doc = await fdb.collection('conferencias').doc(id).get();
     if (!doc.exists){ mostra('tela-erro'); return; }
     rodada = {id, ...doc.data()};
+    if (soData){
+      if (!(rodada.datas || []).includes(soData)){
+        $('#erroTitulo').textContent = 'Link fora de uso';
+        $('#erroTexto').textContent = 'Esta data não faz parte da conferência atual. Fale com o financeiro.';
+        mostra('tela-erro'); return;
+      }
+      rodada.datas = [soData];     // um link por data: a pessoa vê só a dela
+    }
     if (!(rodada.datas || []).length){
       $('#erroTitulo').textContent = 'Conferência ainda não liberada';
       $('#erroTexto').textContent = 'Nenhuma data foi definida. Fale com o financeiro.';
@@ -244,6 +253,12 @@ let linhas = {};
 function montarForm(){
   rodada.datas.forEach(d => linhas[d] = [{id: 'l' + Math.random().toString(36).slice(2,8)}]);
   pintarDatas();
+  if (rodada.datas.length === 1){
+    const d = rodada.datas[0];
+    $('#tituloForm').textContent = 'Confirme o que você tem a receber em ' + fmtData(d);
+    $('#explicaForm').textContent = 'Informe seu nome completo e o valor que você espera receber nesta data. '
+      + 'Depois conferimos com o nosso sistema.';
+  }
   $('#rodapePrazo').textContent = rodada.prazo ? 'Prazo para responder: ' + fmtData(rodada.prazo) : '';
 }
 
@@ -328,15 +343,18 @@ $('#btSim').addEventListener('click', async () => {
     // quem já respondeu com o mesmo nome ou a mesma chave não responde de novo.
     // os marcadores são códigos embaralhados: não revelam nome nem chave de ninguém.
     const marcas = fdb.collection('conferencias').doc(rodada.id).collection('marcas');
-    const mNome = marca('n:' + nomeNormal(nome)), mChave = marca('c:' + chaveNormal(chave));
+    const alvo = rodada.datas.join(',');
+    const mNome = marca('n:' + alvo + ':' + nomeNormal(nome));
+    const mChave = marca('c:' + alvo + ':' + chaveNormal(chave));
     const [dn, dc] = await Promise.all([marcas.doc(mNome).get(), marcas.doc(mChave).get()]);
     const achou = dn.exists ? dn : dc.exists ? dc : null;
     if (achou){
       const resp = achou.data().resp;
       try { await fdb.collection('respostas').doc(resp).set({repetida:true}, {merge:true}); } catch(e){}
-      $('#msgRepetida').textContent = dn.exists
-        ? 'Já recebemos uma resposta com este nome.'
-        : 'Já recebemos uma resposta com esta chave Pix.';
+      const qual = rodada.datas.length === 1 ? ' para ' + fmtData(rodada.datas[0]) : '';
+      $('#msgRepetida').textContent = (dn.exists
+        ? 'Já recebemos uma resposta com este nome'
+        : 'Já recebemos uma resposta com esta chave Pix') + qual + '.';
       $('#nomeCor').value = nome;
       enviada = {id:resp};
       mostra('tela-repetida');

@@ -681,9 +681,12 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .cf-chip button{color:var(--accent-2);opacity:.6;font-size:13px;padding:0 2px}
 .cf-chip button:hover{opacity:1}
 .cf-vazio{color:var(--muted-2);font-size:12.5px}
-.cf-link{display:flex;gap:8px;align-items:center;margin-top:14px;background:var(--surface-2);
-  border:1px dashed var(--line);border-radius:9px;padding:10px 12px;font-size:12.5px}
-.cf-link code{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-links{margin-top:14px;display:flex;flex-direction:column;gap:7px}
+.cf-link-l{display:flex;gap:9px;align-items:center;background:var(--surface-2);
+  border:1px dashed var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px}
+.cf-link-l > b{flex:0 0 92px;font-size:12.5px}
+.cf-link-l code{flex:1;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cf-mudo{color:var(--muted-2)}
 .cf-abas{display:flex;gap:6px;margin:16px 0 12px;border-bottom:1px solid var(--line)}
 .cf-abas button{padding:9px 14px;font-size:13px;font-weight:700;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px}
 .cf-abas button.on{color:var(--accent-2);border-bottom-color:var(--accent)}
@@ -1223,11 +1226,7 @@ try { document.documentElement.dataset.tema =
           <button class="btn sm ghost" id="cfNova">Nova rodada</button>
         </div>
         <div class="cf-chips" id="cfChips"></div>
-        <div class="cf-link hide" id="cfLinkBox">
-          <code id="cfLink"></code>
-          <button class="btn sm" id="cfCopiar">Copiar</button>
-          <button class="btn sm" id="cfZap">WhatsApp</button>
-        </div>
+        <div class="cf-links hide" id="cfLinkBox"></div>
       </div>
 
       <div class="cf-abas" id="cfAbas">
@@ -1572,7 +1571,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 11:54";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 13:02";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2868,8 +2867,10 @@ function normalizeResposta(o){
   const itens = {};
   Object.entries(o.itens || {}).forEach(([d, lista]) => itens[d] = (lista || []).map(x => ({
     valor: Math.round(parseNum(x.valor) * 100) / 100, operacao: String(x.operacao ?? '').trim()})));
+  // com um link por data, cada resposta cobre só as datas que ela traz
+  const datas = [...new Set([...Object.keys(valores), ...Object.keys(itens)])].sort();
   return {id:o.id, rodada:String(o.rodada ?? ''), nome:String(o.nome ?? '').trim(),
-    valores, itens, obs:String(o.obs ?? ''),
+    valores, itens, datas, obs:String(o.obs ?? ''),
     chave:String(o.chave ?? '').trim(), tipoChave:String(o.tipoChave ?? '').trim(),
     enviadaEm: Number(o.enviadaEm) || 0, repetida: !!o.repetida, correcao: String(o.correcao ?? ''),
     situacao: String(o.situacao ?? 'nova'), motivo: String(o.motivo ?? ''),
@@ -3296,15 +3297,20 @@ $('#cfNova').addEventListener('click', async () => {
   S.rodada = null;
   await gravarRodada({datas:[], prazo:''});
 });
-$('#cfCopiar').addEventListener('click', () => {
-  const l = linkDaRodada(); if (!l) return;
-  navigator.clipboard ? navigator.clipboard.writeText(l).then(() => toast('Link copiado')) : toast(l);
-});
-$('#cfZap').addEventListener('click', () => {
-  const r = Conferencia.rodada(), l = linkDaRodada(); if (!l) return;
-  const txt = `Olá! Precisamos da sua conferência dos valores a receber ${r.datas.length > 1 ? 'nas datas' : 'na data'} `
-    + r.datas.map(fmtDate).join(', ') + (r.prazo ? `. Prazo para responder: ${fmtDate(r.prazo)}` : '') + `\n${l}`;
-  window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+$('#cfLinkBox').addEventListener('click', e => {
+  const cop = e.target.closest('[data-cfcopiar]');
+  if (cop){
+    const l = linkDaData(cop.dataset.cfcopiar);
+    navigator.clipboard ? navigator.clipboard.writeText(l).then(() => toast('Link de ' + fmtDate(cop.dataset.cfcopiar) + ' copiado')) : toast(l);
+    return;
+  }
+  const zap = e.target.closest('[data-cfzap]');
+  if (zap){
+    const d = zap.dataset.cfzap, r = Conferencia.rodada(), l = linkDaData(d);
+    const txt = `Olá! Precisamos da sua conferência do valor a receber em ${fmtDate(d)}`
+      + (r.prazo ? `. Prazo para responder: ${fmtDate(r.prazo)}` : '') + `\n${l}`;
+    window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+  }
 });
 $('#cfAbas').addEventListener('click', e => {
   const b = e.target.closest('[data-cfaba]');
@@ -6393,8 +6399,9 @@ const Conferencia = {
 
   /** compara data a data o que a pessoa informou com o que o sistema tem */
   comparar(resposta, cand){
-    const datas = this.rodada().datas;
-    return datas.map(d => {
+    const cobertas = (resposta.datas && resposta.datas.length)
+      ? resposta.datas : this.rodada().datas;
+    return this.rodada().datas.filter(d => cobertas.includes(d)).map(d => {
       const dito = Math.round(parseNum((resposta.valores || {})[d]) * 100) / 100;
       const sistema = cand ? Math.round((cand.porData[d] || 0) * 100) / 100 : 0;
       return {data:d, dito, sistema, bate: toCents(dito) === toCents(sistema),
@@ -6440,7 +6447,9 @@ async function aprovarResposta(id, nomeContribuinte){
   const cand = Conferencia.candidatos().find(c => c.nome === nomeContribuinte)
     || Conferencia.escolhido(resp);
   if (!cand) return toast('Escolha primeiro a qual contribuinte a resposta pertence.');
-  const alvos = cand.linhas.map(r => r.id);
+  // com um link por data, valida só os lançamentos das datas que a resposta cobre
+  const cobertas = resp.datas && resp.datas.length ? resp.datas : Conferencia.rodada().datas;
+  const alvos = cand.linhas.filter(r => cobertas.includes(r.dataPagamento)).map(r => r.id);
   await validarLancamentos(alvos, true);
   await gravarResposta({...resp, situacao:'aprovada', contribuinte:cand.nome,
     conferidaEm:Date.now(), conferidaPor:APP.nome || 'Local'});
@@ -6546,7 +6555,8 @@ async function reprovarResposta(id, motivo){
   if (!podeEditar()) return toast('Seu acesso é somente leitura.');
   if (resp.situacao === 'aprovada' && resp.contribuinte){
     const cand = Conferencia.candidatos().find(c => c.nome === resp.contribuinte);
-    if (cand) await validarLancamentos(cand.linhas.map(r => r.id), false);
+    const cobertas = resp.datas && resp.datas.length ? resp.datas : Conferencia.rodada().datas;
+    if (cand) await validarLancamentos(cand.linhas.filter(r => cobertas.includes(r.dataPagamento)).map(r => r.id), false);
   }
   await gravarResposta({...resp, situacao:'reprovada', motivo: motivo || '',
     conferidaEm:Date.now(), conferidaPor:APP.nome || 'Local'});
@@ -6574,7 +6584,8 @@ async function apagarResposta(id){
     + (resp.situacao === 'aprovada' ? '\nA validação feita a partir dela também será desfeita.' : ''))) return;
   if (resp.situacao === 'aprovada' && resp.contribuinte){
     const cand = Conferencia.candidatos().find(c => c.nome === resp.contribuinte);
-    if (cand) await validarLancamentos(cand.linhas.map(r => r.id), false);
+    const cobertas = resp.datas && resp.datas.length ? resp.datas : Conferencia.rodada().datas;
+    if (cand) await validarLancamentos(cand.linhas.filter(r => cobertas.includes(r.dataPagamento)).map(r => r.id), false);
   }
   if (APP.modo === 'nuvem'){
     try {
@@ -6605,11 +6616,11 @@ async function marcarPendente(id, motivo){
   renderAll();
 }
 
-function linkDaRodada(){
+function linkDaData(data){
   const r = Conferencia.rodada();
   if (!r.id) return '';
   const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-  return base + 'conferencia.html?r=' + encodeURIComponent(r.id);
+  return base + 'conferencia.html?r=' + encodeURIComponent(r.id) + '&d=' + encodeURIComponent(data);
 }
 
 function renderConferencia(){
@@ -6622,18 +6633,31 @@ function renderConferencia(){
     ? r.datas.map(d => `<span class="cf-chip">${fmtDate(d)}<button data-cfdel="${d}" title="Tirar esta data">✕</button></span>`).join('')
     : '<span class="cf-vazio">Acrescente ao menos uma data para gerar o link.</span>';
   $('#cfPrazo').value = r.prazo || '';
-  const link = linkDaRodada();
-  $('#cfLinkBox').classList.toggle('hide', !link);
-  if (link) $('#cfLink').textContent = link;
+  $('#cfLinkBox').classList.toggle('hide', !r.id || !r.datas.length);
+  $('#cfLinkBox').innerHTML = r.datas.map(d => `<div class="cf-link-l">
+      <b>${fmtDate(d)}</b><code>${linkDaData(d)}</code>
+      <button class="btn sm" data-cfcopiar="${d}">Copiar</button>
+      <button class="btn sm" data-cfzap="${d}">WhatsApp</button>
+    </div>`).join('');
 
   const lista = S.respostas.filter(x => x.rodada === r.id);
   const aba = S.cfAba || 'resp';
   const resp = lista.filter(x => x.situacao !== 'pendente');
   const pend = lista.filter(x => x.situacao === 'pendente');
   // quem foi reprovado volta a contar como não respondido
-  const responderam = new Set(lista.filter(x => x.situacao !== 'reprovada')
-    .map(x => (x.contribuinte || '').toLowerCase()).filter(Boolean));
-  const sem = Conferencia.candidatos().filter(c => !responderam.has(c.nome.toLowerCase()));
+  // agora cada par pessoa+data é uma pendência separada
+  const responderam = new Set();
+  lista.filter(x => x.situacao !== 'reprovada').forEach(x => {
+    // vale o contribuinte já definido ou, na falta dele, o que o sistema reconheceu
+    const quem = x.contribuinte || (Conferencia.escolhido(x) || {}).nome;
+    if (!quem) return;
+    (x.datas.length ? x.datas : r.datas).forEach(d => responderam.add(quem.toLowerCase() + '|' + d));
+  });
+  const sem = [];
+  Conferencia.candidatos().forEach(c => r.datas.forEach(d => {
+    if ((c.porData[d] || 0) && !responderam.has(c.nome.toLowerCase() + '|' + d))
+      sem.push({nome:c.nome, data:d, valor:c.porData[d], chave:c.chave});
+  }));
   $('#pipResp').textContent = resp.length;
   $('#pipPend').textContent = pend.length;
   $('#pipSem').textContent = sem.length;
@@ -6641,9 +6665,10 @@ function renderConferencia(){
 
   if (aba === 'sem'){
     $('#cfLista').innerHTML = !r.id ? '<div class="empty">Gere uma rodada primeiro.</div>'
-      : sem.length ? `<table class="pl-tab"><thead><tr><th>Contribuinte</th><th class="num">A receber nas datas</th><th>Chave no sistema</th></tr></thead>
-        <tbody>${sem.map(c => `<tr><td><b>${esc(c.nome)}</b></td>
-          <td class="num">${brl(Object.values(c.porData).reduce((s,v) => s+v, 0))}</td>
+      : sem.length ? `<table class="pl-tab"><thead><tr><th>Data</th><th>Contribuinte</th><th class="num">A receber</th><th>Chave no sistema</th></tr></thead>
+        <tbody>${sem.sort((a,b) => a.data < b.data ? -1 : 1).map(c => `<tr>
+          <td>${fmtDate(c.data)}</td><td><b>${esc(c.nome)}</b></td>
+          <td class="num">${brl(c.valor)}</td>
           <td>${esc(c.chave || '—')}</td></tr>`).join('')}</tbody></table>`
       : '<div class="empty">Todos os contribuintes das datas já responderam.</div>';
     return;
@@ -6675,9 +6700,13 @@ function renderConferencia(){
             ${x.correcao ? '<span class="cf-tag cf-rep">pediu correção</span>' : ''}
             ${x.obs ? '<span class="cf-tag cf-nota">tem observação</span>' : ''}</span>
           ${x.motivo ? `<span class="cf-meta">motivo: ${esc(x.motivo)}</span>` : ''}</td>
-        ${cmp.map(c => `<td class="num"><span class="${!cand ? 'cf-neutro' : c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.dito)}
-          ${c.ditos.length > 1 ? `<small>${c.ditos.length} pagamentos</small>` : ''}
-          ${!cand || c.bate ? '' : `<small>sistema: ${brl(c.sistema)}</small>`}</span></td>`).join('')}
+        ${r.datas.map(d => {
+          const c = cmp.find(y => y.data === d);
+          if (!c) return '<td class="num cf-mudo">—</td>';
+          return `<td class="num"><span class="${!cand ? 'cf-neutro' : c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.dito)}
+            ${c.ditos.length > 1 ? `<small>${c.ditos.length} pagamentos</small>` : ''}
+            ${!cand || c.bate ? '' : `<small>sistema: ${brl(c.sistema)}</small>`}</span></td>`;
+        }).join('')}
         <td><span class="${!cand ? 'cf-neutro' : chaveOk ? 'cf-ok' : 'cf-dif'}">${esc(x.tipoChave || '—')}${x.chave ? ' · ' + esc(x.chave) : ''}
           ${chaveOk || !cand ? '' : `<small>sistema: ${esc(cand.chave || 'sem chave')}</small>`}</span></td>
         <td class="num cf-acoes">
@@ -6731,7 +6760,8 @@ function abrirConferencia(id){
     ${x.correcao ? `<div class="cf-aviso">Pediu correção: ${esc(x.correcao)}</div>` : ''}
     ${x.repetida ? '<div class="cf-aviso">Tentou responder mais de uma vez — só a primeira resposta vale.</div>' : ''}
     <p class="sub">Ao aprovar, a caixinha <b>“valor validado com o contribuinte”</b> é marcada
-      nos ${cand.linhas.length} lançamento(s) dele nas datas da rodada.</p>
+      nos ${cand.linhas.filter(l => cmp.some(c => c.data === l.dataPagamento)).length} lançamento(s) dele
+      ${cmp.length === 1 ? 'em ' + fmtDate(cmp[0].data) : 'nas ' + cmp.length + ' datas desta resposta'}.</p>
     <div class="modal-pe"><button class="btn" data-fecharmodal>Fechar</button>
       <button class="btn danger" data-cfreprovar="${x.id}">Reprovar</button>
       <button class="btn" data-cfpend="${x.id}">Marcar como pendente</button>
