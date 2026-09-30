@@ -213,19 +213,11 @@ html[data-tema="claro"] .b-leitor{color:#2C6396}
 html[data-tema="claro"] .b-pendente{color:#7E620F}
 html[data-tema="claro"] .msg.me{color:#fff}
 html[data-tema="claro"] .op .now{color:#A24814}
-html[data-tema="claro"] .kpi.lead .val{color:#A24814}
 html[data-tema="claro"] .tl-card .v{color:#A24814}
 html[data-tema="claro"] .steps b{color:#A24814}
 html[data-tema="claro"] .fab{box-shadow:0 10px 26px rgba(193,86,26,.28)}
 
 /* ---------- dashboard ---------- */
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(152px,1fr));gap:10px;margin-bottom:16px}
-.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;position:relative;overflow:hidden}
-.kpi.lead{grid-column:span 2;background:linear-gradient(160deg,var(--lead-a),var(--lead-b));border-color:var(--lead-line)}
-.kpi .lab{color:var(--muted-2);font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.kpi .val{font-size:18px;font-weight:800;letter-spacing:-.4px;margin-top:2px;white-space:nowrap}
-.kpi.lead .val{font-size:34px;color:var(--accent-2)}
-.kpi .note{color:var(--muted-2);font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:14px}
 .panel h3{margin:0 0 12px;font-size:13.5px;font-weight:800;color:var(--muted)}
 .grid2{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;align-items:start}
@@ -567,7 +559,6 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
   .nav button{white-space:nowrap}
   .rail-foot{display:none}
   .grid2{grid-template-columns:1fr}
-  .kpi.lead{grid-column:span 2}
   .view{padding:14px}
   .filters{grid-template-columns:1fr 1fr;padding:12px 14px}
   .filters .btn{grid-column:1/-1}
@@ -639,8 +630,6 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
   .tfoot span:last-child{display:none}
 
   /* painéis e tabelas de leitura */
-  .kpis{grid-template-columns:1fr 1fr;gap:8px}
-  .kpi.lead{grid-column:span 2}
   .panel{padding:12px}
   .pl-painel{grid-template-columns:1fr}
   .pl-tab{display:block;overflow-x:auto;white-space:nowrap}
@@ -685,6 +674,11 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .rail-foot .bkline{font-size:11px;color:var(--nav-muted)}
 .pl-painel{display:grid;grid-template-columns:1fr 1fr minmax(240px,.9fr);gap:14px}
 .pl-bloco{background:var(--surface-2);border:1px solid var(--line);border-radius:var(--rs);padding:12px 14px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px;max-width:720px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
+.kpi .lab{color:var(--muted-2);font-size:11.5px;font-weight:700}
+.kpi .val{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-top:3px;white-space:nowrap}
+.kpi .note{color:var(--muted-2);font-size:11.5px;margin-top:3px}
 .pl-bloco.total{background:linear-gradient(160deg,var(--lead-a),var(--lead-b));border-color:var(--lead-line);display:flex;flex-direction:column;justify-content:center}
 .pl-tit{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--muted-2);margin-bottom:9px}
 .pl-lin{display:flex;justify-content:space-between;gap:12px;align-items:baseline;padding:4px 0;font-size:13px;font-variant-numeric:tabular-nums}
@@ -1488,7 +1482,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 09:23";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 09:35";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2050,41 +2044,22 @@ function renderDash(){
   const rows = filtered();
   const pend = rows.filter(r => r.status === 'Pendente' || r.status === 'Agendado');
   const total = pend.reduce((s,r)=>s+r.valor,0);
-  // "Já pago" acompanha o mês aberto no Fluxo de caixa, para conversar com "Saídas do mês"
-  const ymKpi = (typeof M === 'object' && M.ano) ? `${M.ano}-${String(M.mes).padStart(2,'0')}` : getTodaySP().slice(0,7);
-  const pagosMes = S.rows.filter(r => r.status === 'Pago' && String(r.dataPagamento).startsWith(ymKpi));
-  const pago = pagosMes.reduce((s,r) => s + r.valor, 0);
-  const benef = new Set(pend.map(r=>r.contribuinte.toLowerCase())).size;
   const div = chavesDivergentes();
   S.__divergentes = new Set(div.map(x => x.r.id));
   const prob = rows.filter(r => rowIssues(r).length);
-  const prox = [...new Set(pend.map(r=>r.dataPagamento).filter(Boolean))].sort()[0];
-
   const hojeSP = getTodaySP();
   const entraHoje = MotorFinanceiroMP.aReceberEm(hojeSP), saiHoje = MotorFinanceiroMP.aPagarEm(hojeSP);
-  const saldoHoje = subtractMoney(entraHoje, saiHoje);
   const negativos = MotorFinanceiroMP.diasNegativos();
 
-  $('#kpis').innerHTML = `
-    <div class="kpi lead"><div class="lab">Pagamentos previstos</div><div class="val">${brl(total)}</div>
-      <div class="note">${pend.length} lançamentos · ${benef} beneficiários</div></div>
-    <div class="kpi"><div class="lab">Próximo desembolso</div><div class="val">${prox ? fmtDate(prox) : '—'}</div>
-      <div class="note">${brl(pend.filter(r=>r.dataPagamento===prox).reduce((s,r)=>s+r.valor,0))}</div></div>
-    <div class="kpi"><div class="lab">Já pago em ${mesLongo(ymKpi)}</div><div class="val">${brlShort(pago)}</div>
-      <div class="note">${pagosMes.length} lançamento${pagosMes.length === 1 ? '' : 's'} quitado${pagosMes.length === 1 ? '' : 's'}</div></div>
-    <div class="kpi"><div class="lab">Ticket médio</div><div class="val">${brlShort(pend.length ? total/pend.length : 0)}</div>
-      <div class="note">maior: ${brlShort(Math.max(0,...pend.map(r=>r.valor)))}</div></div>
-    <div class="kpi"><div class="lab">Recebimentos previstos hoje</div><div class="val" style="color:var(--ok)">${brlShort(entraHoje)}</div>
-      <div class="note">${fmtDate(hojeSP)}</div></div>
-    <div class="kpi"><div class="lab">Pagamentos previstos hoje</div><div class="val" style="color:var(--accent-2)">${brlShort(saiHoje)}</div>
-      <div class="note">${S.rows.filter(r => r.dataPagamento === hojeSP && ABERTO(r)).length} pagamentos</div></div>
-    <div class="kpi"><div class="lab">Fluxo líquido projetado do dia</div>
-      <div class="val" style="color:${saldoHoje < 0 ? 'var(--bad)' : 'var(--ok)'}">${brlShort(saldoHoje)}</div>
-      <div class="note">${saldoHoje < 0 ? 'falta caixa hoje' : 'entradas cobrem o dia'}</div></div>
-    <div class="kpi"><div class="lab">Recebimentos previstos</div><div class="val">${brlShort(MotorFinanceiroMP.totalAReceber())}</div>
-      <div class="note">${MotorFinanceiroMP.recAberto().length} recebimentos</div></div>
-    <div class="kpi"><div class="lab">Chaves com pendência</div><div class="val" style="color:${prob.length?'var(--bad)':'var(--ok)'}">${prob.length}</div>
-      <div class="note">${prob.length ? 'revisar antes do lote' : 'tudo validado'}</div></div>`;
+  if (existe('kpis')) $('#kpis').innerHTML = `
+    <div class="kpi"><div class="lab">Recebimentos previstos hoje</div>
+      <div class="val" style="color:var(--ok)">${brlShort(entraHoje)}</div>
+      <div class="note">${S.rec.filter(r => dataRec(r) === hojeSP && ABERTO_REC(r)).length} recebimento(s) · ${fmtDate(hojeSP)}</div></div>
+    <div class="kpi"><div class="lab">Pagamentos previstos hoje</div>
+      <div class="val" style="color:var(--accent-2)">${brlShort(saiHoje)}</div>
+      <div class="note">${S.rows.filter(r => r.dataPagamento === hojeSP && ABERTO(r)).length} pagamento(s) · ${fmtDate(hojeSP)}</div></div>`;
+
+
 
   const byDate = {};
   pend.forEach(r => { const d = r.dataPagamento || 'sem data'; byDate[d] = byDate[d] || {v:0,n:0}; byDate[d].v += r.valor; byDate[d].n++; });
