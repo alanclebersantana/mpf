@@ -681,6 +681,10 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .cf-chip button{color:var(--accent-2);opacity:.6;font-size:13px;padding:0 2px}
 .cf-chip button:hover{opacity:1}
 .cf-vazio{color:var(--muted-2);font-size:12.5px}
+.cf-filtros{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;
+  padding-bottom:13px;border-bottom:1px solid var(--line-soft)}
+.cf-filtros .field{min-width:180px}
+.cf-conta{font-size:12px;color:var(--muted-2);margin-left:auto;padding-bottom:9px}
 .cf-links{margin-top:14px;display:flex;flex-direction:column;gap:7px}
 .cf-link-l{display:flex;gap:9px;align-items:center;background:var(--surface-2);
   border:1px dashed var(--line);border-radius:9px;padding:9px 12px;font-size:12.5px}
@@ -1235,7 +1239,17 @@ try { document.documentElement.dataset.tema =
         <button data-cfaba="sem">Ainda não responderam <span class="pip" id="pipSem">0</span></button>
       </div>
 
-      <div class="panel" id="cfPainel"><div id="cfLista"></div></div>
+      <div class="panel" id="cfPainel">
+        <div class="cf-filtros">
+          <div class="field"><label for="cfQ">Buscar por nome</label>
+            <span class="ibox"><input class="inp" id="cfQ" placeholder="nome informado ou contribuinte" autocomplete="off"></span></div>
+          <div class="field"><label for="cfFd">Data</label>
+            <span class="ibox"><select class="inp" id="cfFd"></select></span></div>
+          <button class="btn sm ghost" id="cfLimpar">Limpar</button>
+          <span class="cf-conta" id="cfConta"></span>
+        </div>
+        <div id="cfLista"></div>
+      </div>
     </section>
 
     <section class="view flush hide" id="view-lanc">
@@ -1571,7 +1585,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 13:02";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 14:00";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -1629,7 +1643,7 @@ const S = {
   rows: [], rec: [], adi: [], pagadores: [], ops: OPS_BASE.slice(), sel: new Set(), hist: [], log: [], users: [],
   sort: {k:'dataPagamento', dir:1}, sortRec: {k:'dataPrevista', dir:1}, sortAdi: {k:'dataAdiantada', dir:1},
   f: {...FILTROS_PADRAO}, fr: {q:'', pg:'', st:'Previsto', d1:'', d2:''},
-  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '', restAberto: '', respostas: [], rodada: null, cfAba: 'resp',
+  fa: {q:'', st:'Aguardando', d1:'', d2:''}, recModo: 'simples', saldoInicial: null, estoque: null, limites: null, lotes: [], errolotes: '', loteSel: '', vendas: [], vendaAberta: '', operacoes: {cores:{}, extras:[]}, vendaEdit: '', prejuizos: [], prejAberto: '', restAberto: '', respostas: [], rodada: null, cfAba: 'resp', cfQ: '', cfData: '',
   cfg: {autoAplicar: true}, chat: [], alias: {}, avisado: false,
   view: 'bal'
 };
@@ -3311,6 +3325,13 @@ $('#cfLinkBox').addEventListener('click', e => {
       + (r.prazo ? `. Prazo para responder: ${fmtDate(r.prazo)}` : '') + `\n${l}`;
     window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
   }
+});
+$('#cfQ').addEventListener('input', () => { S.cfQ = $('#cfQ').value; renderConferencia(); });
+$('#cfFd').addEventListener('change', () => { S.cfData = $('#cfFd').value; renderConferencia(); });
+$('#cfLimpar').addEventListener('click', () => {
+  S.cfQ = ''; S.cfData = '';
+  $('#cfQ').value = '';
+  renderConferencia();
 });
 $('#cfAbas').addEventListener('click', e => {
   const b = e.target.closest('[data-cfaba]');
@@ -6640,7 +6661,19 @@ function renderConferencia(){
       <button class="btn sm" data-cfzap="${d}">WhatsApp</button>
     </div>`).join('');
 
-  const lista = S.respostas.filter(x => x.rodada === r.id);
+  // filtros da tela: nome e data
+  const busca = semAcento(S.cfQ || '');
+  const combina = x => {
+    if (busca && !semAcento(`${x.nome} ${x.contribuinte || ''}`).includes(busca)) return false;
+    if (S.cfData && !(x.datas.length ? x.datas : r.datas).includes(S.cfData)) return false;
+    return true;
+  };
+  const todas = S.respostas.filter(x => x.rodada === r.id);
+  const lista = todas.filter(combina);
+  const filtrando = !!(busca || S.cfData);
+  if ($('#cfFd')) $('#cfFd').innerHTML = '<option value="">todas as datas</option>'
+    + r.datas.map(d => `<option value="${d}" ${S.cfData === d ? 'selected' : ''}>${fmtDate(d)}</option>`).join('');
+  if ($('#cfQ') && $('#cfQ').value !== (S.cfQ || '')) $('#cfQ').value = S.cfQ || '';
   const aba = S.cfAba || 'resp';
   const resp = lista.filter(x => x.situacao !== 'pendente');
   const pend = lista.filter(x => x.situacao === 'pendente');
@@ -6655,9 +6688,17 @@ function renderConferencia(){
   });
   const sem = [];
   Conferencia.candidatos().forEach(c => r.datas.forEach(d => {
-    if ((c.porData[d] || 0) && !responderam.has(c.nome.toLowerCase() + '|' + d))
-      sem.push({nome:c.nome, data:d, valor:c.porData[d], chave:c.chave});
+    if (!(c.porData[d] || 0)) return;
+    if (responderam.has(c.nome.toLowerCase() + '|' + d)) return;
+    if (busca && !semAcento(c.nome).includes(busca)) return;
+    if (S.cfData && S.cfData !== d) return;
+    sem.push({nome:c.nome, data:d, valor:c.porData[d], chave:c.chave});
   }));
+  const aviso = [];
+  if (busca) aviso.push(`nome com “${esc(S.cfQ)}”`);
+  if (S.cfData) aviso.push(fmtDate(S.cfData));
+  $('#cfConta').textContent = filtrando
+    ? `mostrando ${aviso.join(' · ')} — ${lista.length} de ${todas.length} resposta(s)` : '';
   $('#pipResp').textContent = resp.length;
   $('#pipPend').textContent = pend.length;
   $('#pipSem').textContent = sem.length;
@@ -6670,15 +6711,18 @@ function renderConferencia(){
           <td>${fmtDate(c.data)}</td><td><b>${esc(c.nome)}</b></td>
           <td class="num">${brl(c.valor)}</td>
           <td>${esc(c.chave || '—')}</td></tr>`).join('')}</tbody></table>`
+      : filtrando ? '<div class="empty">Nada encontrado com este filtro.</div>'
       : '<div class="empty">Todos os contribuintes das datas já responderam.</div>';
     return;
   }
 
   const alvo = aba === 'pend' ? pend : resp;
   if (!alvo.length){
-    $('#cfLista').innerHTML = aba === 'pend'
-      ? '<div class="empty">Nada pendente de confirmação.</div>'
-      : '<div class="empty">Nenhuma resposta recebida ainda. Envie o link aos investidores.</div>';
+    $('#cfLista').innerHTML = filtrando
+      ? '<div class="empty">Nada encontrado com este filtro.</div>'
+      : aba === 'pend'
+        ? '<div class="empty">Nada pendente de confirmação.</div>'
+        : '<div class="empty">Nenhuma resposta recebida ainda. Envie o link aos investidores.</div>';
     return;
   }
 
