@@ -1585,7 +1585,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 14:00";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 14:25";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -6386,11 +6386,11 @@ const Conferencia = {
     S.rows.filter(r => datas.has(r.dataPagamento)).forEach(r => {
       const k = String(r.contribuinte || '').trim();
       if (!k) return;
-      const x = mapa.get(k.toLowerCase()) || {nome:k, chave:r.pix || '', tipo:r.tipoPix || '', linhas:[], porData:{}, itensData:{}};
+      const x = mapa.get(k.toLowerCase()) || {nome:k, chave:r.pix || '', tipo:r.tipoChave || '', linhas:[], porData:{}, itensData:{}};
       x.linhas.push(r);
       x.porData[r.dataPagamento] = (x.porData[r.dataPagamento] || 0) + r.valor;
       (x.itensData[r.dataPagamento] = x.itensData[r.dataPagamento] || []).push(r);
-      if (!x.chave && r.pix) { x.chave = r.pix; x.tipo = r.tipoPix || ''; }
+      if (!x.chave && r.pix) { x.chave = r.pix; x.tipo = r.tipoChave || ''; }
       mapa.set(k.toLowerCase(), x);
     });
     return [...mapa.values()];
@@ -6498,11 +6498,15 @@ function abrirAjustes(id, nomeContribuinte){
   const resp = S.respostas.find(r => r.id === id); if (!resp) return;
   const cand = Conferencia.candidatos().find(c => c.nome === nomeContribuinte); if (!cand) return;
   const fora = ajustesSugeridos(resp, cand);
-  if (!fora.length) return aprovarResposta(id, nomeContribuinte);
+  const chaveFora = !!resp.chave && !mesmaChave(resp.chave, cand.chave);
+  if (!fora.length && !chaveFora) return aprovarResposta(id, nomeContribuinte);
+  // quantos lançamentos em aberto recebem a chave nova
+  const abertos = S.rows.filter(r => r.contribuinte === cand.nome && ABERTO(r));
 
   abrirModal(`<h3>Antes de aprovar</h3>
-    <p class="sub">${fora.length} data(s) com diferença. Escolha o que fazer em cada uma —
-      aprovar sem escolher nada mantém os valores do sistema como estão.</p>
+    <p class="sub">${[fora.length ? fora.length + ' data(s) com diferença' : '', chaveFora ? 'chave Pix diferente' : '']
+      .filter(Boolean).join(' e ')}. Escolha o que fazer —
+      aprovar sem escolher nada mantém o sistema como está.</p>
     ${fora.map((c, i) => {
       const linhasDia = c.nossos;
       const novo = c.falta > 0;
@@ -6527,6 +6531,16 @@ function abrirAjustes(id, nomeContribuinte){
           </span></label>` : ''}
       </div>`;
     }).join('')}
+    ${!chaveFora ? '' : `<div class="aj-bloco">
+      <div class="aj-cab"><b>Chave Pix</b>
+        <span>no sistema <b>${esc(cand.chave || 'sem chave')}</b>${cand.tipo ? ' · ' + esc(cand.tipo) : ''} ·
+          informou <b>${esc(resp.chave)}</b>${resp.tipoChave ? ' · ' + esc(resp.tipoChave) : ''}</span></div>
+      <label class="aj-op"><input type="radio" name="aj-chave" value="nada" checked data-ajchave="nada">
+        <span>Manter a chave que está no sistema</span></label>
+      <label class="aj-op"><input type="radio" name="aj-chave" data-ajchave="trocar">
+        <span>Trocar para a chave informada
+          <small>vale para os ${abertos.length} lançamento(s) em aberto desta pessoa; os já pagos não mudam</small></span></label>
+    </div>`}
     <div class="modal-pe"><button class="btn" data-fecharmodal>Voltar</button>
       <button class="btn primary" data-ajaplicar="${id}|${esc(cand.nome)}">Aplicar e aprovar</button></div>`);
 }
@@ -6538,6 +6552,15 @@ async function aplicarAjustes(id, nomeContribuinte){
   if (!resp || !cand) return;
   const fora = ajustesSugeridos(resp, cand);
   const ops = [], contas = [];
+  const trocaChave = $('#cfModal [data-ajchave="trocar"]');
+  if (trocaChave && trocaChave.checked && resp.chave){
+    const campos = {pix: resp.chave};
+    if (resp.tipoChave) campos.tipoChave = String(resp.tipoChave).toUpperCase();
+    S.rows.filter(r => r.contribuinte === cand.nome && ABERTO(r)).forEach(r => {
+      ops.push({acao:'atualizar', id:r.id, campos});
+    });
+    contas.push(`chave Pix de ${cand.nome}: ${cand.chave || 'sem chave'} → ${resp.chave}`);
+  }
   $$('#cfModal [data-aj]:checked').forEach(el => {
     const [data, acao] = el.dataset.aj.split('|');
     if (acao === 'nada') return;
@@ -6556,7 +6579,7 @@ async function aplicarAjustes(id, nomeContribuinte){
       ops.push({acao:'criar', dados:{
         contribuinte: cand.nome, valor: c.falta, dataPagamento: data,
         dataLancamento: getTodaySP(), status: 'Pendente',
-        operacao: op || modelo.operacao || '', pix: cand.chave || '', tipoPix: cand.tipo || '',
+        operacao: op || modelo.operacao || '', pix: cand.chave || '', tipoChave: cand.tipo || '',
         acordo: `criado pela conferência de valores — informado por ${resp.nome}`,
         base: modelo.base || '', categoria: modelo.categoria || '', centroCusto: modelo.centroCusto || ''}});
       contas.push(`${fmtDate(data)}: novo lançamento de ${brl(c.falta)}${op ? ' · ' + esc(op) : ''}`);
