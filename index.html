@@ -692,6 +692,12 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .cf-tag{display:inline-block;margin-left:5px;padding:1px 8px;border-radius:999px;font-size:10.5px;font-weight:800}
 .cf-duvida{background:var(--warn-dim);color:var(--warn)}
 .cf-rep{background:var(--bad-dim);color:var(--bad)}
+.cf-apr{background:var(--ok-dim);color:var(--ok)}
+.cf-fora{opacity:.55}
+.cf-fora .cf-ok,.cf-fora .cf-dif{filter:grayscale(.7)}
+.cf-acoes{white-space:nowrap;display:flex;gap:6px;justify-content:flex-end;align-items:center}
+.btn.danger{color:var(--bad);border-color:#EED3CF}
+.btn.danger:hover{background:var(--bad-dim)}
 .cf-ok{background:var(--ok-dim);color:var(--ok);font-weight:800;border-radius:7px;padding:3px 8px;display:inline-block}
 .cf-dif{background:var(--bad-dim);color:var(--bad);font-weight:800;border-radius:7px;padding:3px 8px;display:inline-block}
 .cf-ok small,.cf-dif small{display:block;font-weight:600;font-size:10.5px;opacity:.85}
@@ -1549,7 +1555,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 10:17";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 11:01";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -3291,6 +3297,10 @@ $('#view-conf').addEventListener('click', async e => {
   }
   const ver = e.target.closest('[data-cfver]');
   if (ver) return abrirConferencia(ver.dataset.cfver);
+  const apg = e.target.closest('[data-cfapagar]');
+  if (apg) return apagarResposta(apg.dataset.cfapagar);
+  const reab = e.target.closest('[data-cfreabrir]');
+  if (reab) return reabrirResposta(reab.dataset.cfreabrir);
 });
 document.addEventListener('click', async e => {
   if (e.target.closest('[data-fecharmodal]')) return fecharModal();
@@ -3306,6 +3316,13 @@ document.addEventListener('click', async e => {
     const [id, nome] = apr.dataset.cfaprovar.split('|');
     fecharModal();
     return aprovarResposta(id, nome);
+  }
+  const rep = e.target.closest('[data-cfreprovar]');
+  if (rep){
+    const id = rep.dataset.cfreprovar;
+    const motivo = prompt('Por que está reprovando? (fica registrado na linha e na auditoria)') || '';
+    fecharModal();
+    return reprovarResposta(id, motivo);
   }
   const pnd = e.target.closest('[data-cfpend]');
   if (pnd){
@@ -6405,6 +6422,60 @@ async function aprovarResposta(id, nomeContribuinte){
   renderAll();
 }
 
+/** reprovar: a resposta deixa de valer e, se tinha validado, a validação é desfeita */
+async function reprovarResposta(id, motivo){
+  const resp = S.respostas.find(r => r.id === id); if (!resp) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  if (resp.situacao === 'aprovada' && resp.contribuinte){
+    const cand = Conferencia.candidatos().find(c => c.nome === resp.contribuinte);
+    if (cand) await validarLancamentos(cand.linhas.map(r => r.id), false);
+  }
+  await gravarResposta({...resp, situacao:'reprovada', motivo: motivo || '',
+    conferidaEm:Date.now(), conferidaPor:APP.nome || 'Local'});
+  await Repo.registrar({ts:Date.now(), uid:APP.uid || 'local', nome:APP.nome || 'Local', origem:'manual',
+    label:'conferência reprovada', tela:'conf',
+    resumo:[`${resp.nome}${resp.contribuinte ? ' · ' + resp.contribuinte : ''} · ${motivo || 'sem motivo'}`], total:1});
+  toast('Resposta reprovada.');
+  renderAll();
+}
+
+/** reabrir devolve a resposta para a fila, como se ainda não tivesse sido conferida */
+async function reabrirResposta(id){
+  const resp = S.respostas.find(r => r.id === id); if (!resp) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  await gravarResposta({...resp, situacao:'nova', motivo:'', conferidaEm:0, conferidaPor:''});
+  toast('Resposta devolvida para conferir.');
+  renderAll();
+}
+
+/** apagar tira a resposta e libera a pessoa para responder de novo pelo link */
+async function apagarResposta(id){
+  const resp = S.respostas.find(r => r.id === id); if (!resp) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  if (!confirm(`Apagar a resposta de ${resp.nome}?\n\nEla sai da lista e a pessoa poderá responder de novo pelo link.`
+    + (resp.situacao === 'aprovada' ? '\nA validação feita a partir dela também será desfeita.' : ''))) return;
+  if (resp.situacao === 'aprovada' && resp.contribuinte){
+    const cand = Conferencia.candidatos().find(c => c.nome === resp.contribuinte);
+    if (cand) await validarLancamentos(cand.linhas.map(r => r.id), false);
+  }
+  if (APP.modo === 'nuvem'){
+    try {
+      await fdb.collection('respostas').doc(id).delete();
+      // os marcadores de "já respondeu" saem junto, senão a pessoa fica travada
+      const marcas = await fdb.collection('conferencias').doc(resp.rodada).collection('marcas')
+        .where('resp','==',id).get();
+      await Promise.all(marcas.docs.map(d => d.ref.delete()));
+    } catch(e){ return toast('Não consegui apagar: ' + (e.code || e.message)); }
+  } else {
+    S.respostas = S.respostas.filter(r => r.id !== id);
+    Local.set('tesouraria:respostas', JSON.stringify(S.respostas));
+  }
+  await Repo.registrar({ts:Date.now(), uid:APP.uid || 'local', nome:APP.nome || 'Local', origem:'manual',
+    label:'resposta de conferência apagada', tela:'conf', resumo:[`${resp.nome} · ${brl(Object.values(resp.valores || {}).reduce((s,v) => s+v, 0))}`], total:1});
+  toast('Resposta apagada.');
+  renderAll();
+}
+
 async function marcarPendente(id, motivo){
   const resp = S.respostas.find(r => r.id === id); if (!resp) return;
   if (!podeEditar()) return toast('Seu acesso é somente leitura.');
@@ -6441,7 +6512,9 @@ function renderConferencia(){
   const aba = S.cfAba || 'resp';
   const resp = lista.filter(x => x.situacao !== 'pendente');
   const pend = lista.filter(x => x.situacao === 'pendente');
-  const responderam = new Set(lista.map(x => (x.contribuinte || '').toLowerCase()).filter(Boolean));
+  // quem foi reprovado volta a contar como não respondido
+  const responderam = new Set(lista.filter(x => x.situacao !== 'reprovada')
+    .map(x => (x.contribuinte || '').toLowerCase()).filter(Boolean));
   const sem = Conferencia.candidatos().filter(c => !responderam.has(c.nome.toLowerCase()));
   $('#pipResp').textContent = resp.length;
   $('#pipPend').textContent = pend.length;
@@ -6474,17 +6547,24 @@ function renderConferencia(){
       const cand = Conferencia.escolhido(x);
       const cmp = Conferencia.comparar(x, cand);
       const chaveOk = cand && mesmaChave(x.chave, cand.chave);
-      return `<tr>
+      return `<tr class="${x.situacao === 'reprovada' ? 'cf-fora' : ''}">
         <td><b>${esc(x.nome)}</b>
           <span class="cf-meta">${hora(x.enviadaEm)}${cand ? ' · ' + esc(cand.nome) : ''}
-            ${!cand ? '<span class="cf-tag cf-duvida">quem é?</span>' : ''}
+            ${x.situacao === 'aprovada' ? '<span class="cf-tag cf-apr">aprovada</span>' : ''}
+            ${x.situacao === 'reprovada' ? '<span class="cf-tag cf-rep">reprovada</span>' : ''}
+            ${!cand && x.situacao !== 'reprovada' ? '<span class="cf-tag cf-duvida">quem é?</span>' : ''}
             ${x.repetida ? '<span class="cf-tag cf-rep">tentou responder de novo</span>' : ''}
-            ${x.correcao ? '<span class="cf-tag cf-rep">pediu correção</span>' : ''}</span></td>
+            ${x.correcao ? '<span class="cf-tag cf-rep">pediu correção</span>' : ''}</span>
+          ${x.motivo ? `<span class="cf-meta">motivo: ${esc(x.motivo)}</span>` : ''}</td>
         ${cmp.map(c => `<td class="num"><span class="${!cand ? 'cf-neutro' : c.bate ? 'cf-ok' : 'cf-dif'}">${brl(c.dito)}
           ${!cand || c.bate ? '' : `<small>sistema: ${brl(c.sistema)}</small>`}</span></td>`).join('')}
         <td><span class="${!cand ? 'cf-neutro' : chaveOk ? 'cf-ok' : 'cf-dif'}">${esc(x.tipoChave || '—')}${x.chave ? ' · ' + esc(x.chave) : ''}
           ${chaveOk || !cand ? '' : `<small>sistema: ${esc(cand.chave || 'sem chave')}</small>`}</span></td>
-        <td class="num"><button class="btn sm primary" data-cfver="${x.id}">Conferir</button></td></tr>`;
+        <td class="num cf-acoes">
+          ${x.situacao === 'reprovada'
+            ? `<button class="btn sm" data-cfreabrir="${x.id}">Reabrir</button>`
+            : `<button class="btn sm primary" data-cfver="${x.id}">Conferir</button>`}
+          <button class="lixo" data-cfapagar="${x.id}" title="Apagar esta resposta">✕</button></td></tr>`;
     }).join('')}</tbody></table>`;
 }
 
@@ -6503,6 +6583,7 @@ function abrirConferencia(id){
         ${c.linhas.length} lançamento(s)${c.chaveIgual ? ' · chave igual à informada' : c.chave ? ' · chave: ' + esc(c.chave) : ''}</span></button>`).join('')}</div>`
         : '<div class="empty">Nenhum contribuinte com pagamento nas datas desta rodada.</div>'}
       <div class="modal-pe"><button class="btn" data-fecharmodal>Nenhum destes</button>
+        <button class="btn danger" data-cfreprovar="${x.id}">Reprovar</button>
         <button class="btn" data-cfpend="${x.id}">Marcar como pendente</button></div>`);
   }
   const cmp = Conferencia.comparar(x, cand);
@@ -6523,6 +6604,7 @@ function abrirConferencia(id){
     <p class="sub">Ao aprovar, a caixinha <b>“valor validado com o contribuinte”</b> é marcada
       nos ${cand.linhas.length} lançamento(s) dele nas datas da rodada.</p>
     <div class="modal-pe"><button class="btn" data-fecharmodal>Fechar</button>
+      <button class="btn danger" data-cfreprovar="${x.id}">Reprovar</button>
       <button class="btn" data-cfpend="${x.id}">Marcar como pendente</button>
       <button class="btn primary" data-cfaprovar="${x.id}|${esc(cand.nome)}">Aprovar e validar</button></div>`);
 }
