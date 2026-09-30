@@ -950,7 +950,7 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 #view-mensal .mn-t tfoot td{font-weight:800;border-top:1px solid var(--line);border-bottom:none}
 #view-mensal .mn-scroll{overflow-x:auto}
 
-#view-mensal .mn-fx{display:grid;grid-template-columns:92px minmax(90px,1fr) 150px 150px 160px;gap:12px;align-items:center;padding:6px 8px;border-radius:6px}
+#view-mensal .mn-fx{display:grid;grid-template-columns:88px minmax(80px,1fr) 140px 140px 150px 150px;gap:12px;align-items:center;padding:6px 8px;border-radius:6px}
 #view-mensal .mn-fx > div,#view-mensal .mn-fx > span{white-space:nowrap}
 #view-mensal .mn-fxh{color:var(--muted-2);font-size:11.5px;font-weight:800;padding-bottom:6px;border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px}
 #view-mensal .mn-fxh span:nth-child(n+3){text-align:right}
@@ -1480,7 +1480,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "28/09/2026 11:04";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 09:11";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -7104,16 +7104,17 @@ const Mensal = (() => {
     el('pnlFluxo').classList.toggle('alerta', negs.length > 0);
     el('fluxoNota').textContent = fx.length ? `${fx.length} dias com movimento` + (negs.length ? ` · ${negs.length} com saída maior que a entrada` : '') : '';
     el('fluxo').innerHTML = fx.length ? `
-      <div class="mn-fx mn-fxh"><span>Dia</span><span></span><span>Entra</span><span>Sai</span><span>Fluxo do dia</span></div>
+      <div class="mn-fx mn-fxh"><span>Dia</span><span></span><span>Entra</span><span>Sai</span><span>Já pago</span><span>Fluxo do dia</span></div>
       <div class="mn-fxs">${fx.map(x => `
         <div class="mn-fx ${x.saldo < 0 && x.s > 0 ? 'neg' : ''} ${x.data === h ? 'hoje' : ''} ${x.data > h ? 'fut' : ''}" data-dia="${x.data}" title="Ver os lançamentos de ${fmtDate(x.data)}" style="cursor:pointer">
           <div class="d"><b>${x.data.slice(8)}/${x.data.slice(5,7)}</b><small>${diaSemana(x.data)}</small></div>
           <div class="br"><span class="in" style="width:${(x.e/maxD*100).toFixed(1)}%"></span><span class="out" style="width:${(x.s/maxD*100).toFixed(1)}%"></span></div>
           <div class="v ${x.e ? 'mn-e' : 'mn-mut'} ${x.e && x.eReal < x.e ? 'mn-prev' : ''}">${brlC(x.e)}</div>
           <div class="v ${x.s ? 'mn-s' : 'mn-mut'} ${x.s && x.sReal < x.s ? 'mn-prev' : ''}">${brlC(x.s)}</div>
+          <div class="v ${x.sReal ? 'mn-e' : 'mn-mut'}">${x.sReal ? brlC(x.sReal) : '—'}${x.s && x.sReal === x.s ? ' <small class="selo-ok">tudo pago</small>' : ''}</div>
           <div class="v saldo ${x.saldo < 0 ? 'mn-neg' : 'mn-pos'}"><b>${sinal(x.saldo)}</b></div>
         </div>`).join('')}</div>
-      <div class="mn-nota">Valores em itálico ainda incluem previsões não confirmadas. Clique no dia para ver os lançamentos.</div>`
+      <div class="mn-nota">Valores em itálico ainda incluem previsões não confirmadas. A coluna “Já pago” mostra quanto das saídas daquele dia já saiu de fato — o total do dia não muda quando você paga, só a divisão entre pago e a pagar. Clique no dia para ver os lançamentos.</div>`
       : '<div class="empty">Nenhuma entrada ou saída com data neste mês.</div>';
 
     el('porOp').innerHTML = rank(agrupar(R.sai.filter(NO_CAIXA), r => r.operacao || '(sem operação)', r => toC(r.valor), r => r.status === 'Pago'), 's', 10);
@@ -7260,8 +7261,8 @@ const Mensal = (() => {
       ['Cancelado', v(R.canc), R.nCanc + ' itens']]);
     ws1['!cols'] = [{wch:32},{wch:18},{wch:18},{wch:18}];
     XLSX.utils.book_append_sheet(wb, ws1, 'Resumo');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Dia','Recebimentos','Pagamentos','Fluxo do dia'],
-      ...fluxoDiario(R).map(x => [fmtDate(x.data), v(x.e), v(x.s), v(x.saldo)])]), 'Fluxo diário');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Dia','Recebimentos','Pagamentos','Já pago','Fluxo do dia'],
+      ...fluxoDiario(R).map(x => [fmtDate(x.data), v(x.e), v(x.s), v(x.sReal), v(x.saldo)])]), 'Fluxo diário');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Pagamento','Beneficiário','Operação','Acordo','Status','Valor','Chave Pix'],
       ...R.sai.slice().sort((a,b) => a.dataPagamento < b.dataPagamento ? -1 : 1).map(r => [fmtDate(r.dataPagamento), r.contribuinte, r.operacao, r.acordo, r.status, r.valor, r.pix])]), 'Saídas');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([['Data','Pagador','Descrição','Status','Previsto','Recebido'],
