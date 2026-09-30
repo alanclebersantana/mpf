@@ -699,6 +699,15 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .cf-det-cols i{display:block;font-style:normal;font-weight:800;color:var(--muted-2);text-transform:uppercase;
   letter-spacing:.3px;font-size:9.5px;margin-bottom:3px}
 .cf-det-cols span{display:block;color:var(--muted);padding:1px 0}
+.aj-bloco{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px}
+.aj-cab{margin-bottom:9px}
+.aj-cab b{font-size:13.5px}
+.aj-cab span{display:block;font-size:11.5px;color:var(--muted-2);margin-top:2px}
+.aj-op{display:flex;gap:9px;align-items:flex-start;padding:7px 0;font-size:13px;cursor:pointer}
+.aj-op input[type=radio]{margin-top:3px;flex:0 0 auto}
+.aj-op span{flex:1}
+.aj-op small{display:block;color:var(--muted-2);font-size:11px;margin-top:3px}
+.aj-op .inp.mini{display:block;margin-top:6px;width:100%}
 .cf-obs{background:var(--surface-2);border-radius:9px;padding:10px 12px;font-size:12.5px;margin:10px 0;white-space:pre-wrap}
 .cf-obs b{display:block;font-size:11px;color:var(--muted-2);text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
 .cf-fora{opacity:.55}
@@ -1563,7 +1572,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 11:24";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 11:54";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -3327,7 +3336,12 @@ document.addEventListener('click', async e => {
   if (apr){
     const [id, nome] = apr.dataset.cfaprovar.split('|');
     fecharModal();
-    return aprovarResposta(id, nome);
+    return abrirAjustes(id, nome);   // sem diferença, aprova direto
+  }
+  const aja = e.target.closest('[data-ajaplicar]');
+  if (aja){
+    const [id, nome] = aja.dataset.ajaplicar.split('|');
+    return aplicarAjustes(id, nome);
   }
   const rep = e.target.closest('[data-cfreprovar]');
   if (rep){
@@ -6437,6 +6451,95 @@ async function aprovarResposta(id, nomeContribuinte){
   renderAll();
 }
 
+/** o que o investidor informou e o sistema não tem, data a data */
+function ajustesSugeridos(resp, cand){
+  return Conferencia.comparar(resp, cand).filter(c => !c.bate).map(c => {
+    const falta = Math.round((c.dito - c.sistema) * 100) / 100;
+    // tenta achar de qual item veio a diferença, para já sugerir a descrição
+    const sobrando = (c.ditos || []).filter(x => !(c.nossos || [])
+      .some(r => toCents(r.valor) === toCents(x.valor)));
+    const candidato = sobrando.find(x => toCents(x.valor) === toCents(falta));
+    return {...c, falta, sobrando, candidato};
+  });
+}
+
+/** antes de aprovar, oferece corrigir o que está fora */
+function abrirAjustes(id, nomeContribuinte){
+  const resp = S.respostas.find(r => r.id === id); if (!resp) return;
+  const cand = Conferencia.candidatos().find(c => c.nome === nomeContribuinte); if (!cand) return;
+  const fora = ajustesSugeridos(resp, cand);
+  if (!fora.length) return aprovarResposta(id, nomeContribuinte);
+
+  abrirModal(`<h3>Antes de aprovar</h3>
+    <p class="sub">${fora.length} data(s) com diferença. Escolha o que fazer em cada uma —
+      aprovar sem escolher nada mantém os valores do sistema como estão.</p>
+    ${fora.map((c, i) => {
+      const linhasDia = c.nossos;
+      const novo = c.falta > 0;
+      return `<div class="aj-bloco" data-ajdata="${c.data}">
+        <div class="aj-cab"><b>${fmtDate(c.data)}</b>
+          <span>informou ${brl(c.dito)} · sistema ${brl(c.sistema)} ·
+            <b class="${novo ? 'cf-dif-txt' : 'cf-ok-txt'}">${novo ? 'faltam' : 'sobram'} ${brl(Math.abs(c.falta))}</b></span></div>
+        <label class="aj-op"><input type="radio" name="aj-${i}" value="nada" checked data-aj="${c.data}|nada">
+          <span>Deixar como está — só valida</span></label>
+        ${linhasDia.length ? `<label class="aj-op"><input type="radio" name="aj-${i}" data-aj="${c.data}|ajustar">
+          <span>Corrigir um lançamento para o valor informado
+            <select class="inp mini" data-ajalvo="${c.data}">
+              ${linhasDia.map(r => `<option value="${r.id}">${esc(r.codigo || '')} ${brl(r.valor)}${r.operacao ? ' · ' + esc(r.operacao) : ''}</option>`).join('')}
+            </select>
+            <small>o lançamento escolhido passa a valer ${brl(linhasDia.length === 1 ? c.dito : 0)}${linhasDia.length > 1 ? ' o que faltar para fechar o dia' : ''}</small>
+          </span></label>` : ''}
+        ${novo ? `<label class="aj-op"><input type="radio" name="aj-${i}" data-aj="${c.data}|criar">
+          <span>Criar um lançamento novo de <b>${brl(c.falta)}</b>
+            <input class="inp mini" data-ajop="${c.data}" placeholder="operação / referência"
+              value="${esc((c.candidato || c.sobrando[0] || {}).operacao || '')}">
+            <small>${c.candidato ? 'a pessoa informou este valor à parte' : 'valor que falta para fechar o dia'}</small>
+          </span></label>` : ''}
+      </div>`;
+    }).join('')}
+    <div class="modal-pe"><button class="btn" data-fecharmodal>Voltar</button>
+      <button class="btn primary" data-ajaplicar="${id}|${esc(cand.nome)}">Aplicar e aprovar</button></div>`);
+}
+
+/** aplica as correções escolhidas e então aprova */
+async function aplicarAjustes(id, nomeContribuinte){
+  const resp = S.respostas.find(r => r.id === id);
+  const cand = Conferencia.candidatos().find(c => c.nome === nomeContribuinte);
+  if (!resp || !cand) return;
+  const fora = ajustesSugeridos(resp, cand);
+  const ops = [], contas = [];
+  $$('#cfModal [data-aj]:checked').forEach(el => {
+    const [data, acao] = el.dataset.aj.split('|');
+    if (acao === 'nada') return;
+    const c = fora.find(x => x.data === data); if (!c) return;
+    if (acao === 'ajustar'){
+      const alvoId = $(`#cfModal [data-ajalvo="${data}"]`).value;
+      const alvo = S.rows.find(r => r.id === alvoId); if (!alvo) return;
+      const outros = c.nossos.filter(r => r.id !== alvoId).reduce((s, r) => s + toCents(r.valor), 0);
+      const novoValor = fromCents(Math.max(0, toCents(c.dito) - outros));
+      ops.push({acao:'atualizar', id:alvoId, campos:{valor:novoValor}});
+      contas.push(`${fmtDate(data)}: ${esc(alvo.codigo || alvo.contribuinte)} de ${brl(alvo.valor)} para ${brl(novoValor)}`);
+    }
+    if (acao === 'criar'){
+      const op = ($(`#cfModal [data-ajop="${data}"]`) || {}).value || '';
+      const modelo = c.nossos[0] || cand.linhas[0] || {};
+      ops.push({acao:'criar', dados:{
+        contribuinte: cand.nome, valor: c.falta, dataPagamento: data,
+        dataLancamento: getTodaySP(), status: 'Pendente',
+        operacao: op || modelo.operacao || '', pix: cand.chave || '', tipoPix: cand.tipo || '',
+        acordo: `criado pela conferência de valores — informado por ${resp.nome}`,
+        base: modelo.base || '', categoria: modelo.categoria || '', centroCusto: modelo.centroCusto || ''}});
+      contas.push(`${fmtDate(data)}: novo lançamento de ${brl(c.falta)}${op ? ' · ' + esc(op) : ''}`);
+    }
+  });
+  fecharModal();
+  if (ops.length){
+    await aplicar(ops, 'manual', `conferência de ${cand.nome}: ${ops.length} correção(ões)`);
+    toast(`${ops.length} correção(ões) aplicada(s).`);
+  }
+  await aprovarResposta(id, nomeContribuinte);
+}
+
 /** reprovar: a resposta deixa de valer e, se tinha validado, a validação é desfeita */
 async function reprovarResposta(id, motivo){
   const resp = S.respostas.find(r => r.id === id); if (!resp) return;
@@ -6632,7 +6735,7 @@ function abrirConferencia(id){
     <div class="modal-pe"><button class="btn" data-fecharmodal>Fechar</button>
       <button class="btn danger" data-cfreprovar="${x.id}">Reprovar</button>
       <button class="btn" data-cfpend="${x.id}">Marcar como pendente</button>
-      <button class="btn primary" data-cfaprovar="${x.id}|${esc(cand.nome)}">Aprovar e validar</button></div>`);
+      <button class="btn primary" data-cfaprovar="${x.id}|${esc(cand.nome)}">${problemas ? 'Revisar e aprovar' : 'Aprovar e validar'}</button></div>`);
 }
 
 /** uma janela simples, reaproveitada pela conferência */
