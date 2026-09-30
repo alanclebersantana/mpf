@@ -268,6 +268,10 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 .busca svg{position:absolute;left:12px;top:13px;width:19px;height:19px;stroke:var(--muted-2)}
 .busca .limpar{position:absolute;right:8px;top:8px;width:30px;height:30px;border-radius:50%;color:var(--muted-2)}
 .chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:9px;margin-bottom:2px;scrollbar-width:none}
+.card.grudado{position:sticky;top:calc(env(safe-area-inset-top, 0px));z-index:18;margin-top:10px;
+  box-shadow:0 6px 18px rgba(16,35,63,.22)}
+#mDias .dia.hoje{background:var(--accent-dim);border-radius:10px;padding-left:9px;padding-right:9px}
+#mDias .dia.hoje .data::after{content:' · hoje';font-size:11px;font-weight:700;color:var(--accent-2)}
 .chips::-webkit-scrollbar{display:none}
 .chips button{flex:0 0 auto;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--surface);
   font-size:13px;font-weight:700;color:var(--muted)}
@@ -427,7 +431,7 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
       <div class="mini"><div class="rot">Recebimentos previstos do mês</div><div class="val pos" id="mEnt">—</div></div>
       <div class="mini"><div class="rot">Pagamentos previstos do mês</div><div class="val sai" id="mSai">—</div></div>
     </div>
-    <div class="card destaque" style="margin-top:10px">
+    <div class="card destaque grudado" id="mFluxoCard">
       <div class="rot">Fluxo líquido do mês</div>
       <div class="val" id="mRes">—</div>
       <div class="nota" id="mNota"></div>
@@ -536,7 +540,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "28/09/2026 11:04";
+const VERSAO = "30/09/2026 09:03";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -545,7 +549,7 @@ const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','ag
 
 const S = {rows:[], rec:[], adi:[], log:[], estoque:{itens:[]}, saldo:{valor:0, mesRef:''},
   tela:'bal', mesSel:'', limite:{lanc:40, rec:40, adi:40},
-  sel:new Set(), selTipo:'', selModo:false, bqAberto:'', vendas:[], vendaAberta:'', vendaEdit:'', ciaAberta:'', limiteDias:7, prejuizos:[], prejAberto:'',
+  sel:new Set(), selTipo:'', selModo:false, bqAberto:'', mesJaAberto:false, vendas:[], vendaAberta:'', vendaEdit:'', ciaAberta:'', limiteDias:7, prejuizos:[], prejAberto:'',
   f:{lanc:{q:'', st:'Pendente', op:'', d1:'', d2:'', v1:'', v2:''},
      rec:{q:'', st:'Previsto', pg:'', d1:'', d2:''},
      adi:{q:'', st:'Aguardando', d1:'', d2:''}}};
@@ -1484,11 +1488,36 @@ function pintarBalanco(){
 
 }
 
+/** deixa o mês selecionado visível logo na abertura, sem esconder os anteriores */
+function posicionarChipMes(){
+  const barra = $('#mesChips'); if (!barra) return;
+  requestAnimationFrame(() => {
+    const ativo = barra.querySelector('button.on');
+    if (!ativo) return;
+    barra.scrollLeft = Math.max(0, ativo.offsetLeft - 8);
+    // alguns navegadores só acertam a posição com scrollIntoView
+    try { ativo.scrollIntoView({inline:'start', block:'nearest'}); } catch(e){}
+  });
+}
+/** posiciona a lista no dia de hoje quando o mês aberto é o corrente */
+function irParaHojeNaLista(){
+  const lista = $('#mDias'); if (!lista) return;
+  requestAnimationFrame(() => {
+    const hoje = lista.querySelector('[data-hoje]');
+    if (!hoje || S.mesSel !== hojeSP().slice(0,7)) return;
+    const topoCard = lista.closest('.card');
+    const alvo = topoCard.offsetTop + hoje.offsetTop - ($('#mFluxoCard') ? $('#mFluxoCard').offsetHeight + 18 : 70);
+    window.scrollTo({top: Math.max(0, alvo), behavior: S.mesJaAberto ? 'smooth' : 'auto'});
+    S.mesJaAberto = true;
+  });
+}
+
 function pintarMes(){
   const meses = Calc.meses();
   if (!meses.length){ $('#mesChips').innerHTML = ''; $('#mDias').innerHTML = '<div class="vazio">Sem dados.</div>'; return; }
   if (!S.mesSel || !meses.includes(S.mesSel)) S.mesSel = meses.includes(hojeSP().slice(0,7)) ? hojeSP().slice(0,7) : meses[meses.length-1];
   $('#mesChips').innerHTML = meses.map(m => `<button data-mes="${m}" class="${m === S.mesSel ? 'on' : ''}">${mesNome(m).replace(' de ', '/').slice(0,3)}${m.slice(2,4)}</button>`).join('');
+  posicionarChipMes();
   const dado = Calc.doMes(S.mesSel);
   $('#mEnt').textContent = curto(dado.entradas);
   $('#mSai').textContent = curto(dado.saidas);
@@ -1504,8 +1533,9 @@ function pintarMes(){
   const maior = Math.max(1, ...dias.map(d => Math.max(porDia[d].e, porDia[d].s)));
   $('#mDias').innerHTML = dias.length
     ? dias.map(d => { acum += porDia[d].e - porDia[d].s;
-        return linhaDia(d, real(porDia[d].e), real(porDia[d].s), porDia[d].n, real(acum), maior); }).join('')
+        return linhaDia(d, real(porDia[d].e), real(porDia[d].s), porDia[d].n, real(acum), maior, d === hojeSP()); }).join('')
     : '<div class="vazio">Sem movimento no mês.</div>';
+  irParaHojeNaLista();
 
   $('#mTop').innerHTML = dado.sai.slice().sort((a,b) => b.valor - a.valor).slice(0,8).map(r => `
     <button class="item" data-abrir="lanc:${r.id}">
@@ -1516,13 +1546,13 @@ function pintarMes(){
 }
 
 /** um dia do caixa: entra, sai e saldo em colunas próprias, sem texto cortado */
-function linhaDia(data, entra, sai, qtdSaidas, acumulado, maior){
+function linhaDia(data, entra, sai, qtdSaidas, acumulado, maior, ehHoje){
   const saldo = real(cent(entra) - cent(sai));
   const barra = !maior ? '' : `<div class="barras">
       <i class="be" style="width:${Math.max(entra ? 2 : 0, cent(entra)/maior*100).toFixed(1)}%"></i>
       <i class="bs" style="width:${Math.max(sai ? 2 : 0, cent(sai)/maior*100).toFixed(1)}%"></i>
     </div>`;
-  return `<div class="dia">
+  return `<div class="dia ${ehHoje ? 'hoje' : ''}" ${ehHoje ? 'data-hoje="1"' : ''}>
     <div class="cab"><span class="data">${fmtData(data)}</span>
       <span class="qtd">${qtdSaidas ? qtdSaidas + ' pagamento' + (qtdSaidas === 1 ? '' : 's') : ''}</span></div>
     <div class="col e"><span>Recebimentos</span><b>${entra ? brl(entra) : '—'}</b></div>
@@ -1998,7 +2028,12 @@ document.addEventListener('click', async e => {
     montarChips(); return pintarLista(tipo);
   }
   const mes = e.target.closest('[data-mes]');
-  if (mes){ S.mesSel = mes.dataset.mes; return pintarMes(); }
+  if (mes){
+    S.mesSel = mes.dataset.mes;
+    // trocar de mês na mão volta ao topo da lista, em vez de pular para hoje
+    if (S.mesSel !== hojeSP().slice(0,7)) window.scrollTo({top:0, behavior:'smooth'});
+    return pintarMes();
+  }
 
   const editar = e.target.closest('[data-editar]');
   if (editar){ const [t, id] = editar.dataset.editar.split(':'); return abrirEdicao(t, id); }
