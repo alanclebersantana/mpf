@@ -950,21 +950,29 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 #view-mensal .mn-t tfoot td{font-weight:800;border-top:1px solid var(--line);border-bottom:none}
 #view-mensal .mn-scroll{overflow-x:auto}
 
-#view-mensal .mn-fx{display:grid;grid-template-columns:88px minmax(80px,1fr) 140px 140px 150px 150px;gap:12px;align-items:center;padding:6px 8px;border-radius:6px}
+#view-mensal .mn-fx{display:grid;grid-template-columns:96px minmax(120px,1fr) 150px 150px 132px 160px;
+  gap:18px;align-items:center;padding:10px 12px;border-radius:8px}
 #view-mensal .mn-fx > div,#view-mensal .mn-fx > span{white-space:nowrap}
-#view-mensal .mn-fxh{color:var(--muted-2);font-size:11.5px;font-weight:800;padding-bottom:6px;border-bottom:1px solid var(--line);border-radius:0;margin-bottom:4px}
+#view-mensal .mn-fxh{color:var(--muted-2);font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;
+  padding:0 12px 8px;border-bottom:1px solid var(--line);border-radius:0;margin-bottom:2px}
 #view-mensal .mn-fxh span:nth-child(n+3){text-align:right}
-#view-mensal .mn-fx .d b{font-weight:800}
-#view-mensal .mn-fx .d small{color:var(--muted-2);margin-left:4px}
-#view-mensal .mn-fx .br{display:flex;flex-direction:column;gap:3px}
-#view-mensal .mn-fx .br span{height:6px;border-radius:3px;display:block}
+#view-mensal .mn-fxs .mn-fx + .mn-fx{border-top:1px solid var(--line-soft)}
+#view-mensal .mn-fxs .mn-fx:nth-child(even):not(.neg){background:var(--surface-2)}
+#view-mensal .mn-fx:hover{background:var(--accent-dim)}
+#view-mensal .mn-fx .d b{font-weight:800;font-size:13.5px}
+#view-mensal .mn-fx .d small{display:block;color:var(--muted-2);margin:1px 0 0;font-size:10.5px;text-transform:uppercase;letter-spacing:.3px}
+#view-mensal .mn-fx .br{display:flex;flex-direction:column;gap:4px;opacity:.85}
+#view-mensal .mn-fx .br span{height:5px;border-radius:3px;display:block;min-width:2px}
+#view-mensal .mn-fx .v{font-variant-numeric:tabular-nums}
+#view-mensal .mn-fx .selo-ok{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;
+  font-size:9.5px;font-weight:800;background:var(--ok-dim);color:var(--ok);vertical-align:middle}
 #view-mensal .mn-fx .br .in{background:var(--ok)}
 #view-mensal .mn-fx .br .out{background:var(--accent)}
 #view-mensal .mn-fx .v{text-align:right}
 #view-mensal .mn-fx.neg{background:var(--bad-dim)}
-#view-mensal .mn-fx.hoje{box-shadow:inset 3px 0 0 var(--accent-2)}
+#view-mensal .mn-fx.hoje{box-shadow:inset 3px 0 0 var(--accent-2);background:var(--accent-dim)}
 #view-mensal .mn-fx.fut .d b{font-weight:600;color:var(--muted)}
-#view-mensal .mn-fxs{max-height:520px;overflow:auto}
+#view-mensal .mn-fxs{max-height:560px;overflow:auto;margin:0 -4px;padding:0 4px}
 
 #view-mensal .mn-rk{display:flex;flex-direction:column;gap:9px}
 #view-mensal .mn-rk-row{display:grid;grid-template-columns:minmax(140px,260px) 1fr 128px;gap:12px;align-items:center;font-size:13px}
@@ -1480,7 +1488,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "30/09/2026 09:11";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "30/09/2026 09:23";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2042,7 +2050,10 @@ function renderDash(){
   const rows = filtered();
   const pend = rows.filter(r => r.status === 'Pendente' || r.status === 'Agendado');
   const total = pend.reduce((s,r)=>s+r.valor,0);
-  const pago = rows.filter(r=>r.status==='Pago').reduce((s,r)=>s+r.valor,0);
+  // "Já pago" acompanha o mês aberto no Fluxo de caixa, para conversar com "Saídas do mês"
+  const ymKpi = (typeof M === 'object' && M.ano) ? `${M.ano}-${String(M.mes).padStart(2,'0')}` : getTodaySP().slice(0,7);
+  const pagosMes = S.rows.filter(r => r.status === 'Pago' && String(r.dataPagamento).startsWith(ymKpi));
+  const pago = pagosMes.reduce((s,r) => s + r.valor, 0);
   const benef = new Set(pend.map(r=>r.contribuinte.toLowerCase())).size;
   const div = chavesDivergentes();
   S.__divergentes = new Set(div.map(x => x.r.id));
@@ -2059,8 +2070,8 @@ function renderDash(){
       <div class="note">${pend.length} lançamentos · ${benef} beneficiários</div></div>
     <div class="kpi"><div class="lab">Próximo desembolso</div><div class="val">${prox ? fmtDate(prox) : '—'}</div>
       <div class="note">${brl(pend.filter(r=>r.dataPagamento===prox).reduce((s,r)=>s+r.valor,0))}</div></div>
-    <div class="kpi"><div class="lab">Já pago</div><div class="val">${brlShort(pago)}</div>
-      <div class="note">${rows.filter(r=>r.status==='Pago').length} lançamentos</div></div>
+    <div class="kpi"><div class="lab">Já pago em ${mesLongo(ymKpi)}</div><div class="val">${brlShort(pago)}</div>
+      <div class="note">${pagosMes.length} lançamento${pagosMes.length === 1 ? '' : 's'} quitado${pagosMes.length === 1 ? '' : 's'}</div></div>
     <div class="kpi"><div class="lab">Ticket médio</div><div class="val">${brlShort(pend.length ? total/pend.length : 0)}</div>
       <div class="note">maior: ${brlShort(Math.max(0,...pend.map(r=>r.valor)))}</div></div>
     <div class="kpi"><div class="lab">Recebimentos previstos hoje</div><div class="val" style="color:var(--ok)">${brlShort(entraHoje)}</div>
@@ -7111,7 +7122,9 @@ const Mensal = (() => {
           <div class="br"><span class="in" style="width:${(x.e/maxD*100).toFixed(1)}%"></span><span class="out" style="width:${(x.s/maxD*100).toFixed(1)}%"></span></div>
           <div class="v ${x.e ? 'mn-e' : 'mn-mut'} ${x.e && x.eReal < x.e ? 'mn-prev' : ''}">${brlC(x.e)}</div>
           <div class="v ${x.s ? 'mn-s' : 'mn-mut'} ${x.s && x.sReal < x.s ? 'mn-prev' : ''}">${brlC(x.s)}</div>
-          <div class="v ${x.sReal ? 'mn-e' : 'mn-mut'}">${x.sReal ? brlC(x.sReal) : '—'}${x.s && x.sReal === x.s ? ' <small class="selo-ok">tudo pago</small>' : ''}</div>
+          <div class="v ${x.sReal ? 'mn-e' : 'mn-mut'}">${!x.s ? '—'
+            : x.sReal === x.s ? '<small class="selo-ok">tudo pago</small>'
+            : x.sReal ? brlC(x.sReal) : '<span class="mn-mut">a pagar</span>'}</div>
           <div class="v saldo ${x.saldo < 0 ? 'mn-neg' : 'mn-pos'}"><b>${sinal(x.saldo)}</b></div>
         </div>`).join('')}</div>
       <div class="mn-nota">Valores em itálico ainda incluem previsões não confirmadas. A coluna “Já pago” mostra quanto das saídas daquele dia já saiu de fato — o total do dia não muda quando você paga, só a divisão entre pago e a pagar. Clique no dia para ver os lançamentos.</div>`

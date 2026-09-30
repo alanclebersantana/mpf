@@ -452,7 +452,6 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
       </div>
     </div>
     <div class="card"><h2>Dia a dia</h2><div class="rola-dias" id="mDias"></div></div>
-    <div class="card"><h2>Maiores saídas do mês</h2><div id="mTop"></div></div>
   </section>
 
   <!-- LANÇAMENTOS -->
@@ -555,7 +554,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "30/09/2026 09:13";
+const VERSAO = "30/09/2026 09:26";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -1565,12 +1564,6 @@ function pintarMes(){
     : '<div class="vazio">Sem movimento no mês.</div>';
   irParaHojeNaLista();
 
-  $('#mTop').innerHTML = dado.sai.slice().sort((a,b) => b.valor - a.valor).slice(0,8).map(r => `
-    <button class="item" data-abrir="lanc:${r.id}">
-      <div class="l1"><span class="nome">${esc(r.contribuinte)}</span><span class="valor">${brl(r.valor)}</span></div>
-      <div class="l2"><span class="meta">${fmtData(r.dataPagamento)}${r.operacao ? ' · ' + esc(r.operacao) : ''}</span>
-        <span class="tag t-${esc(r.status)}">${esc(r.status)}</span></div></button>`).join('')
-    || '<div class="vazio">Sem saídas no mês.</div>';
 }
 
 /** um dia do caixa: entra, sai e saldo em colunas próprias, sem texto cortado */
