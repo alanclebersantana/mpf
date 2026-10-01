@@ -554,7 +554,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "01/10/2026 11:35";
+const VERSAO = "01/10/2026 11:48";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -606,7 +606,7 @@ const fmtData = iso => { if (!iso) return '—'; const [a,m,d] = iso.split('-');
 const fmtCurta = iso => { if (!iso) return '—'; const [a,m,d] = iso.split('-'); return `${d}/${m}`; };
 const mesNome = ym => { const [a,m] = String(ym).split('-'); return `${MESES[+m-1]} de ${a}`; };
 const hora = ts => new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
-const podeEditar = () => APP.papel === 'admin' || APP.papel === 'operador';
+const podeEditar = () => ['admin', 'operador', 'parcial'].includes(APP.papel);
 
 /* ---------- acesso por página ----------
    O papel "parcial" enxerga só as telas liberadas no cadastro dele.

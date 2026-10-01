@@ -682,9 +682,22 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .cf-chip button:hover{opacity:1}
 .cf-vazio{color:var(--muted-2);font-size:12.5px}
 .rb-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
-#rbGrid td{padding:5px 8px}
-#rbGrid .inp.mini{width:100%}
-#rbGrid .num .inp.mini{text-align:right}
+#rbGrid td{padding:0;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+#rbGrid .cell{min-height:38px}
+#rbGrid .cell.num{justify-content:flex-end;text-align:right}
+#rbGrid .cell.editing{background:var(--accent-dim);box-shadow:inset 0 0 0 2px var(--accent)}
+#rbGrid .cell input,#rbGrid .cell select{width:100%;height:30px;border:none;background:transparent;
+  font:inherit;font-size:13px;color:var(--text);outline:none;padding:0}
+#rbGrid .cell input.num{text-align:right}
+#rbGrid .cel-vazio{color:var(--muted-2)}
+#rbGrid .acoes-cel{text-align:center}
+#rbGrid tbody tr:hover td{background:var(--hover)}
+.op-chip{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11.5px;font-weight:800}
+.op-chip.q-123{background:#E3EEFB;color:#1E4E8C}
+.op-chip.q-vdp{background:#EDE6F8;color:#5B3A91}
+.op-chip.q-outro{background:var(--surface-2);color:var(--muted)}
+html[data-tema="escuro"] .op-chip.q-123{background:rgba(62,124,196,.22);color:#9CC2EE}
+html[data-tema="escuro"] .op-chip.q-vdp{background:rgba(124,92,186,.24);color:#C4AEEC}
 #rbPorQuem{color:var(--muted)}
 .cf-filtros{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;
   padding-bottom:13px;border-bottom:1px solid var(--line-soft)}
@@ -2497,7 +2510,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 11:35";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "01/10/2026 11:48";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2785,7 +2798,8 @@ function estiloOp(op){
   if (!cor) return '';
   return ` style="background:${cor}22;color:${cor};border-color:${cor}55"`;
 }
-const podeEditar = () => APP.papel === 'admin' || APP.papel === 'operador';
+// o acesso parcial edita por inteiro — dentro das páginas liberadas para ele
+const podeEditar = () => ['admin', 'operador', 'parcial'].includes(APP.papel);
 
 /* ---------- acesso por página ----------
    O papel "parcial" enxerga só as telas marcadas no cadastro dele. */
@@ -3282,6 +3296,7 @@ function renderLog(){
 /* ---------- usuários ---------- */
 function renderUsers(){
   const papeis = ['pendente','leitor','parcial','operador','admin'];
+  if (!podeVer('users')) return;
   $('#userList').innerHTML = S.users.length ? S.users.map(u => `
     <tr><td>${esc(u.nome||'—')}</td><td style="color:var(--muted)">${esc(u.email||'')}</td>
       <td>${APP.papel === 'admin' && u.uid !== APP.uid
@@ -4431,17 +4446,9 @@ $('#view-reemb').addEventListener('click', e => {
   const del = e.target.closest('[data-rbdel]');
   if (del) return apagarReembolso(del.dataset.rbdel);
 });
-$('#view-reemb').addEventListener('change', async e => {
-  const el = e.target; if (!el.dataset.rb) return;
-  const r = S.reembolsos.find(x => x.id === el.dataset.id); if (!r) return;
-  const k = el.dataset.rb;
-  let v = k === 'valor' ? parseNum(el.value) : el.value;
-  if (k === 'quem' && v === 'Outros'){
-    const nome = prompt('Nome de quem recebeu a devolução:', '') || '';
-    if (!nome.trim()) return renderReembolsos();
-    v = nome.trim();
-  }
-  await gravarReembolso({...r, [k]: v}, 'reembolso atualizado');
+$('#rbBody').addEventListener('click', e => {
+  const cel = e.target.closest('.cell[data-rbk]');
+  if (cel && !cel.classList.contains('editing')) editarCelulaReembolso(cel);
 });
 
 /* ---------- menu do controle de liminares ---------- */
@@ -7930,7 +7937,6 @@ function renderReembolsos(){
     (!S.rbQuem || r.quem === S.rbQuem) &&
     (!busca || semAcento(`${r.quem} ${r.referencia} ${r.pontos}`).includes(busca)));
 
-  // as etiquetas dos filtros ativos, como na tela de Pagamentos
   const chips = [];
   if (S.rbQ) chips.push(['Busca: ' + S.rbQ, 'q']);
   if (S.rbMes) chips.push([mesLongo(S.rbMes), 'mes']);
@@ -7938,17 +7944,16 @@ function renderReembolsos(){
   $('#rbChips').innerHTML = chips.map(([txt, k]) =>
     `<span class="fchip">${esc(txt)}<button data-rbchip="${k}" title="Tirar este filtro">✕</button></span>`).join('');
 
+  const celula = (r, k, conteudo, extra) =>
+    `<td><div class="cell ${extra || ''}" data-rbk="${k}" data-id="${r.id}" tabindex="0">${conteudo}</div></td>`;
+
   $('#rbBody').innerHTML = lista.length ? lista.map(r => `<tr data-rbid="${r.id}">
-      <td><input class="inp mini" type="date" data-rb="data" data-id="${r.id}" value="${r.data}"></td>
-      <td>${RECEBEDORES.includes(r.quem)
-        ? `<select class="inp mini" data-rb="quem" data-id="${r.id}">
-            ${RECEBEDORES.map(q => `<option ${q === r.quem ? 'selected' : ''}>${q}</option>`).join('')}
-            <option value="Outros">Outros…</option></select>`
-        : `<input class="inp mini" data-rb="quem" data-id="${r.id}" value="${esc(r.quem)}">`}</td>
-      <td><input class="inp mini" data-rb="referencia" data-id="${r.id}" value="${esc(r.referencia)}" placeholder="observação"></td>
-      <td><input class="inp mini" data-rb="pontos" data-id="${r.id}" value="${esc(r.pontos)}" placeholder="só anotação"></td>
-      <td class="num"><input class="inp mini num" data-rb="valor" data-id="${r.id}" value="${r.valor.toFixed(2).replace('.',',')}"></td>
-      <td class="num"><button class="lixo" data-rbdel="${r.id}" title="Apagar">✕</button></td></tr>`).join('')
+      ${celula(r, 'data', fmtDate(r.data))}
+      ${celula(r, 'quem', `<span class="op-chip ${r.quem === '123' ? 'q-123' : r.quem === 'VDP' ? 'q-vdp' : 'q-outro'}">${esc(r.quem)}</span>`)}
+      ${celula(r, 'referencia', r.referencia ? esc(r.referencia) : '<span class="cel-vazio">—</span>')}
+      ${celula(r, 'pontos', r.pontos ? esc(r.pontos) : '<span class="cel-vazio">—</span>')}
+      ${celula(r, 'valor', `<b>${brl(r.valor)}</b>`, 'num')}
+      <td class="acoes-cel"><button class="lixo" data-rbdel="${r.id}" title="Apagar">✕</button></td></tr>`).join('')
     : `<tr><td colspan="6"><div class="empty">${S.reembolsos.length
         ? 'Nada encontrado com este filtro.' : 'Nenhum reembolso registrado. Use “+ Novo reembolso”.'}</div></td></tr>`;
 
@@ -7958,6 +7963,57 @@ function renderReembolsos(){
   $('#rbTotal').textContent = brl(totalReembolsos(lista));
   $('#rbPorQuem').innerHTML = Object.entries(porQuem).sort((a,b) => b[1] - a[1])
     .map(([q, c]) => `${esc(q)}: <b>${brl(fromCents(c))}</b>`).join(' · ');
+}
+
+/** edição na célula, como na tela de Pagamentos: Enter salva, Esc cancela */
+let rbEditando = null;
+function editarCelulaReembolso(cel){
+  if (rbEditando) return;
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  const id = cel.dataset.id, k = cel.dataset.rbk;
+  const r = S.reembolsos.find(x => x.id === id); if (!r) return;
+  rbEditando = {id, k};
+  cel.classList.add('editing');
+  const antes = cel.innerHTML;
+  let el;
+  if (k === 'quem' && RECEBEDORES.includes(r.quem) === false || k === 'quem'){
+    el = document.createElement('select');
+    el.innerHTML = [...RECEBEDORES, r.quem].filter((v,i,a) => a.indexOf(v) === i)
+      .map(q => `<option ${q === r.quem ? 'selected' : ''}>${esc(q)}</option>`).join('')
+      + '<option value="__outro">Outro nome…</option>';
+  } else {
+    el = document.createElement('input');
+    if (k === 'data') el.type = 'date';
+    el.value = k === 'data' ? r.data
+             : k === 'valor' ? r.valor.toFixed(2).replace('.',',')
+             : r[k];
+    if (k === 'valor') el.className = 'num';
+  }
+  cel.innerHTML = '';
+  cel.appendChild(el);
+  el.focus();
+  if (el.select) el.select();
+
+  const fechar = () => { rbEditando = null; cel.classList.remove('editing'); };
+  const cancelar = () => { cel.innerHTML = antes; fechar(); };
+  const salvar = async () => {
+    let v = el.value;
+    if (k === 'quem' && v === '__outro'){
+      const nome = prompt('Nome de quem recebeu a devolução:', r.quem) || '';
+      if (!nome.trim()) return cancelar();
+      v = nome.trim();
+    }
+    if (k === 'valor') v = parseNum(v);
+    fechar();
+    if (String(v) === String(r[k])) return renderReembolsos();
+    await gravarReembolso({...r, [k]: v}, 'reembolso atualizado');
+  };
+  el.addEventListener('keydown', e => {
+    if (e.key === 'Enter'){ e.preventDefault(); salvar(); }
+    if (e.key === 'Escape'){ e.preventDefault(); cancelar(); }
+  });
+  el.addEventListener('blur', salvar);
+  if (el.tagName === 'SELECT') el.addEventListener('change', salvar);
 }
 
 function renderConferencia(){
