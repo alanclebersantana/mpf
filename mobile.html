@@ -622,7 +622,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "01/10/2026 16:33";
+const VERSAO = "01/10/2026 17:36";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -682,8 +682,8 @@ const podeEditar = () => ['admin', 'operador', 'parcial'].includes(APP.papel);
    Os nomes aqui são os do celular; a tela "lim" só existe no computador. */
 const EQUIV = {bal:'bal', mes:'mensal', lanc:'lanc', rec:'rec', est:'est', prej:'prej', adi:'adi', log:'log',
   reemb:'reemb', lim:'lim'};
-const podeVer = tela => APP.papel !== 'parcial'
-  || (APP.paginas || []).includes(EQUIV[tela] || tela);
+const podeVer = tela => tela === 'log' ? APP.papel === 'admin'
+  : (APP.papel !== 'parcial' || (APP.paginas || []).includes(EQUIV[tela] || tela));
 
 /** some do menu o que a pessoa não pode abrir */
 function aplicarAcesso(){

@@ -539,6 +539,10 @@ td.cbx input{accent-color:var(--accent);width:14px;height:14px}
 .tagtela.tela-rec{background:var(--ok-dim);color:var(--ok)}
 .tagtela.tela-adi,.tagtela.tela-lote{background:var(--warn-dim);color:var(--warn)}
 .tagtela.tela-users,.tagtela.tela-backup{background:var(--info-dim);color:var(--info)}
+.tela-lim{background:rgba(242,194,48,.18);color:#8A6A10}
+.tela-reemb{background:var(--accent-dim);color:var(--accent-2)}
+.tela-conf{background:var(--info-dim);color:var(--info)}
+html[data-tema="escuro"] .tela-lim{background:rgba(242,194,48,.2);color:#E8C765}
 .tagorigem{font-size:10.5px;color:var(--muted-2);border:1px solid var(--line);border-radius:999px;padding:0 6px;margin-left:6px}
 .users{width:100%;border-collapse:collapse}
 .users th{text-align:left;font-size:12px;color:var(--muted-2);padding:8px 10px;border-bottom:1px solid var(--line)}
@@ -2521,7 +2525,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 16:49";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "01/10/2026 17:36";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2793,7 +2797,8 @@ function proximoCodigo(){ return Math.max(0, ...S.rows.map(r => numeroDoCodigo(r
 /** nome da tela onde a alteração aconteceu, para a auditoria não ficar ambígua */
 const TELAS = {prej:'Prejuízos', lanc:'Pagamentos', rec:'Recebimentos', rec:'Recebimentos', adi:'Lotes e adiantamentos', lote:'Lotes e adiantamentos',
   bal:'Visão geral', estoque:'Estoque de milhas', saldo:'Visão geral', limites:'Visão geral',
-  users:'Usuários', import:'Importar', backup:'Backups'};
+  users:'Usuários', import:'Importar', backup:'Backups',
+  lim:'Controle de liminares', reemb:'Reembolsos', conf:'Conferência de valores'};
 // quem tem acesso parcial não vê sequer o nome das telas que não pode abrir
 const nomeDaTela = k => (typeof podeVer === 'function' && !podeVer(k)) ? '' : (TELAS[k] || '');
 
@@ -2824,7 +2829,10 @@ const PAGINAS = [
   {v:'users',  t:'Usuários'},         {v:'bkp',    t:'Backups'}
 ];
 const paginasLiberadas = () => (APP.paginas || []);
-const podeVer = v => APP.papel !== 'parcial' || paginasLiberadas().includes(v);
+// a Auditoria é só do administrador; o resto segue o papel e as páginas liberadas
+const SO_ADMIN = ['log', 'users', 'bkp'];
+const podeVer = v => SO_ADMIN.includes(v) ? APP.papel === 'admin'
+  : (APP.papel !== 'parcial' || paginasLiberadas().includes(v));
 
 /** esconde do menu as telas que a pessoa não pode abrir */
 function aplicarAcesso(){
@@ -3647,7 +3655,7 @@ $('#userList').addEventListener('click', e => {
   const atuais = u.paginas || [];
   abrirModal(`<h3>Páginas liberadas</h3>
     <p class="sub">${esc(u.nome || u.email || '')} enxerga apenas o que estiver marcado.</p>
-    <div class="pag-lista">${PAGINAS.map(x => `<label class="pag-l">
+    <div class="pag-lista">${PAGINAS.filter(x => !SO_ADMIN.includes(x.v)).map(x => `<label class="pag-l">
       <input type="checkbox" data-pag="${x.v}" ${atuais.includes(x.v) ? 'checked' : ''}>
       <span>${esc(x.t)}</span></label>`).join('')}</div>
     <div class="modal-pe"><button class="btn" data-fecharmodal>Cancelar</button>
@@ -9746,19 +9754,58 @@ const ler = async (nome, ...filtros) => {
     const atual = docsDoEstado(S);
     const lote = fdb.batch();
     let n = 0;
+    const mudou = {criou:{}, alterou:{}, apagou:{}};
+    const anota = (tipo, col) => mudou[tipo][col] = (mudou[tipo][col] || 0) + 1;
+
     for (const k in atual) {
       if (JSON.stringify(atual[k]) !== JSON.stringify(anterior[k])) {
         const [col, id] = k.split('/');
         lote.set(COL(col).doc(id), atual[k]);
+        anota(k in anterior ? 'alterou' : 'criou', col);
         n++;
       }
     }
     for (const k in anterior) {
-      if (!(k in atual)) { const [col, id] = k.split('/'); lote.delete(COL(col).doc(id)); n++; }
+      if (!(k in atual)) {
+        const [col, id] = k.split('/');
+        lote.delete(COL(col).doc(id));
+        anota('apagou', col);
+        n++;
+      }
     }
-    if (n) await lote.commit();
+    if (n) {
+      await lote.commit();
+      registrarNaAuditoria(mudou, n);
+    }
     anterior = atual;
     return n;
+  }
+
+  /** o nome de cada coleção do liminares, como aparece na auditoria */
+  const NOMES_LIM = {parceiros:'parceiro', contas:'conta', operacoes:'operação',
+    lancamentos:'lançamento', custos:'custo', pagamentos:'pagamento', convites:'convite', config:'configuração'};
+  const PLURAL = {'operação':'operações', 'configuração':'configurações'};
+  const plural = (nome, n) => n === 1 ? nome : (PLURAL[nome] || nome + 's');
+
+  /** toda movimentação no liminares vira uma linha na Auditoria do financeiro */
+  async function registrarNaAuditoria(mudou, total){
+    const verbos = {criou:'criou', alterou:'alterou', apagou:'apagou'};
+    const resumo = [];
+    ['criou','alterou','apagou'].forEach(tipo => {
+      Object.entries(mudou[tipo]).forEach(([col, n]) => {
+        const nome = NOMES_LIM[col] || col;
+        resumo.push(`${verbos[tipo]} ${n} ${plural(nome, n)}`);
+      });
+    });
+    if (!resumo.length) return;
+    try {
+      await fdb.collection('auditoria').add({
+        ts: Date.now(),
+        uid: (typeof APP !== 'undefined' && APP.uid) || 'local',
+        nome: (typeof APP !== 'undefined' && APP.nome) || 'Local', origem: 'liminares',
+        label: 'controle de liminares', tela: 'lim', resumo, total
+      });
+    } catch(e){ /* a auditoria nunca pode atrapalhar o trabalho */ }
   }
 
   
@@ -12871,7 +12918,10 @@ window.__erroAcesso = function(e, etapa, email, uid){
     if (digitando){ timerRecarga = setTimeout(recarregarDeFora, 4000); return; }
     try {
       const estado = await carregarComoAdmin();
-      S = estado; migrar(); refreshAll();
+      S = estado; migrar();
+      // sem isto, o próximo envio compararia com o retrato velho e ressuscitaria o que foi apagado
+      anterior = docsDoEstado(S);
+      refreshAll();
       if (typeof renderAll === 'function') renderAll();   // os cards da visão geral acompanham
     } catch(e){ console.warn('liminares: não consegui atualizar', e); }
   }
@@ -12908,6 +12958,7 @@ window.__erroAcesso = function(e, etapa, email, uid){
       try {
         const estado = await carregarComoAdmin();
         window.__aplicarEstadoRemoto(estado, 'admin');
+        anterior = docsDoEstado(estado);   // o retrato de partida, para o envio comparar
         pronto = true;
         escutarMudancas();
       } catch(e) {
