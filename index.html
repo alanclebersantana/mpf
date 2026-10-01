@@ -1766,7 +1766,7 @@ try { document.documentElement.dataset.tema =
   <!-- ================= PAINEL ================= -->
   <section class="panel on" id="p-painel">
     <div id="lockPainel"></div>
-    <div class="limKpis no-print" id="limKpis"></div>
+    <div class="kpis no-print" id="limKpis"></div>
 
     <div class="box no-print filtros">
       <div class="filtros-top">
@@ -2450,7 +2450,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 11:01";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "01/10/2026 11:07";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -10910,7 +10910,7 @@ function renderExtrato(){
   const t = k => ls.reduce((a,l)=>a+(+l[k]||0),0);
   const trava = fechado(mk_);
   el('extratoOut').innerHTML = `
-    <div class="limKpis">
+    <div class="kpis">
       <div class="kpi"><span>Milhas no mês</span><b>${num(t('milhas'))}</b></div>
       <div class="kpi"><span>Custo</span><b class="r">${money(t('custo'))}</b></div>
       <div class="kpi"><span>Resultado (a pagar ao parceiro)</span><b class="g">${money(t('resultado'))}</b></div>
@@ -11358,7 +11358,7 @@ function renderCreditos(periodo){
   }
 
   el('iaResultado').innerHTML = `
-    <div class="limKpis">
+    <div class="kpis">
       <div class="kpi"><span>Período lido</span><b style="font-size:calc(16px * var(--escala))">${
         periodo && periodo.de ? esc(periodo.de.split('-').reverse().join('/')) + ' – ' + esc((periodo.ate||'').split('-').reverse().join('/')) : '—'}</b></div>
       <div class="kpi"><span>Grupos de crédito</span><b>${uteis.length}</b><em>parcelas e bônus já somados</em></div>
