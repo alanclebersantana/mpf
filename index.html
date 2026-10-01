@@ -1131,6 +1131,10 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 .lim-mod .pag-lista{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px}
 .pag-l{display:flex;gap:9px;align-items:center;padding:8px 10px;border-radius:9px;font-size:13.5px;cursor:pointer}
 .pag-l:hover{background:var(--surface-2)}
+.lim-mod .lim-marca{width:16px;height:16px;cursor:pointer}
+.lim-mod tr.lim-repetido{opacity:.62}
+.lim-mod tr:hover{background:var(--surface-2)}
+#limTodos{width:16px;height:16px;cursor:pointer}
 .lim-mod .pix-aviso{background:var(--warn-dim);border:1px solid #EEDCB4;border-radius:9px;
   padding:9px 12px;font-size:12.5px;color:#6E4E10;margin-top:12px}
 #limApp{min-height:calc(100vh - 128px)}
@@ -1143,6 +1147,7 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 .sub-lim button:hover{background:rgba(255,255,255,.07)}
 .sub-lim button.on{background:rgba(255,255,255,.13);color:#fff}
 .sub-lim .gr{font-size:9.5px;font-weight:800;color:#6E86A6;letter-spacing:.5px;padding:9px 10px 3px}
+
 #limApp{
   --navy:#12304C;
   --navy-2:#1B4266;
@@ -1178,7 +1183,7 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
   --sutil:#F4F7FA; --cream:#FBFAF6; --escala:1;
   --navy-txt:var(--navy);
 }#limApp *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}#limApp [hidden]{display:none !important}#limApp, #limApp{margin:0;padding:0}#limApp{
-  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  font-family:Nunito,system-ui,-apple-system,"Segoe UI",sans-serif;
   background:var(--bg);color:var(--ink);
   font-size:calc(15px * var(--escala));line-height:1.45;
   padding-bottom:calc(72px + env(safe-area-inset-bottom));
@@ -1244,7 +1249,7 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
   letter-spacing:-.02em;font-variant-numeric:tabular-nums}#limApp .fx-cx em{display:block;font-style:normal;font-size:12px;color:#C9D7E6;line-height:1.5}#limApp .fx-contas{columns:2;column-gap:20px}#limApp .fx-contas div{break-inside:avoid;display:flex;justify-content:space-between;gap:8px;
   padding:5px 0;border-bottom:1px solid #E6EBF0;font-size:12.5px}#limApp .fx-contas b{font-variant-numeric:tabular-nums;white-space:nowrap}#limApp .fx-contas i{font-style:normal;color:#8A97A6;font-size:10.5px}#limApp .fx-ext2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:0 18px;align-items:start;margin-top:2px}#limApp .fx-col{min-width:0}#limApp .fx-ext2.fx-uma{grid-template-columns:1fr}#limApp .fx-ext2 .fx-blk{break-inside:avoid;margin:0 0 10px;border:2px solid #12304C;border-radius:9px;
   overflow:hidden;background:#fff}#limApp .fx-ext2 .fx-blk-h{display:flex;justify-content:space-between;gap:8px;background:#12304C;color:#fff;
-  padding:5px 9px;font-size:11.5px;font-weight:800}#limApp .fx-ext2 table{width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed}#limApp .fx-ext2 td{padding:2.5px 6px;border-bottom:1px solid #F0F3F6;vertical-align:top}#limApp .fx-ext2 tr:last-child td{border-bottom:0}#limApp .fx-ext2 .d{width:34px;color:#8A97A6}#limApp .fx-ext2 .m{width:56px;text-align:right;color:#4A5B6C;font-variant-numeric:tabular-nums;white-space:nowrap}#limApp .fx-ext2 .v{width:84px;text-align:right;color:#0F7A38;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}#limApp .fx-ext2 .op{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#limApp .fx-ext-tot{display:flex;justify-content:space-between;border-top:2px solid #12304C;
+  padding:5px 9px;font-size:11.5px;font-weight:800}#limApp .fx-ext2 table{width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed}#limApp .fx-ext2 td{padding:2.5px 6px;border-bottom:1px solid #F0F3F6;vertical-align:top}#limApp .fx-ext2 tr:last-child td{border-bottom:0}#limApp .fx-ext2 .d{width:34px;color:#8A97A6}#limApp .fx-ext2 .m{width:56px;text-align:right;color:#4A5B6C;font-variant-numeric:tabular-nums;white-space:nowrap}#limApp .fx-ext2 .v{width:84px;text-align:right;color:#0F7A38;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}#limApp .fx-ext2 .lim-op{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#limApp .fx-ext-tot{display:flex;justify-content:space-between;border-top:2px solid #12304C;
   margin-top:2px;padding-top:5px;font-weight:800;font-size:12px}#limApp @media screen and (max-width:760px){#limApp .fx-lado{grid-template-columns:1fr}#limApp .fx-contas{columns:1}#limApp .fx-ext2{grid-template-columns:1fr} }#limApp[data-modo="mobile"] #report:not(.fx-export) .fx-lado{grid-template-columns:1fr}#limApp[data-modo="mobile"] #report:not(.fx-export) .fx-contas{columns:1}#limApp[data-modo="mobile"] #report:not(.fx-export) .fx-ext2{grid-template-columns:1fr}#limApp #report.fx-compacto .fx{padding:2px 2px 0}#limApp #report.fx-compacto .fx-rec-top{padding:10px 14px}#limApp #report.fx-compacto .fx-rec-corpo{padding:10px 14px 12px}#limApp #report.fx-compacto .fx-stats{margin:5px 0 0}#limApp #report.fx-compacto .fx-sec{margin-top:9px}#limApp #report.fx-compacto .fx-sec h4{margin-bottom:2px}#limApp #report.fx-compacto .fx-cia{padding:3px 0}#limApp #report.fx-compacto .fx-status{margin-top:8px;padding:5px 9px}#limApp #report.fx-compacto .fx-tab th, #limApp #report.fx-compacto .fx-tab td{padding:4px 6px}#limApp #report.fx-compacto .fx-leitura{margin-top:10px;line-height:1.45}#limApp #report.fx-compacto .fx-pe{margin-top:6px}
 
 #limApp .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin-bottom:12px}#limApp .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;box-shadow:var(--shadow)}#limApp .kpi span{font-size:calc(10px * var(--escala));font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);display:block}#limApp .kpi b{display:block;font-size:calc(21px * var(--escala));font-weight:800;color:var(--navy-txt);margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}#limApp .kpi b.g{color:var(--green-dark)}#limApp .kpi b.r{color:#B4232A}#limApp .kpi em{display:block;font-style:normal;font-size:calc(11px * var(--escala));color:var(--muted);margin-top:4px}#limApp .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:calc(11px * var(--escala));font-weight:800;white-space:nowrap}#limApp .badge.ok{background:rgba(22,163,74,.14);color:var(--green-dark)}#limApp .badge.wait{background:rgba(224,168,46,.18);color:#9A6E00}#limApp .badge.open{background:var(--sutil);color:var(--navy-txt)}#limApp .subnav{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px}#limApp .subnav button{
@@ -2445,7 +2450,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 10:20";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "01/10/2026 11:01";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -4206,30 +4211,67 @@ window.MPF_incluirLiminares = function(dados){
   const dataDo = dia => `${ano}-${String(mes).padStart(2,'0')}-${String(Math.min(dia || 5, ultimo)).padStart(2,'0')}`;
   const total = dados.lista.reduce((s,x) => s + x.valor, 0);
 
+  // quem já foi incluído neste mês não vem marcado, para não duplicar
+  const jaTem = nome => S.rows.some(r => r.operacao === 'LIMINARES'
+    && r.contribuinte.trim().toLowerCase() === nome.trim().toLowerCase()
+    && String(r.dataPagamento).startsWith(dados.mes));
+
   abrirModal(`<h3>Incluir valores ao Planejamento Financeiro</h3>
     <p class="sub">${esc(dados.mesLabel)} · operação <b>LIMINARES</b>.
-      Confira a chave Pix e a data de cada parceiro.</p>
+      Marque quem você quer incluir e confira a chave Pix e a data de cada um.</p>
     <table class="pl-tab lim-mod">
-      <thead><tr><th>Parceiro</th><th class="num">Valor</th><th>Chave Pix</th><th>Data de pagamento</th></tr></thead>
-      <tbody>${dados.lista.map(x => `<tr>
-        <td><b>${esc(x.nome)}</b><span class="cf-meta">dia ${x.dia} no cadastro</span></td>
+      <thead><tr>
+        <th style="width:34px"><input type="checkbox" id="limTodos" checked title="marcar todos"></th>
+        <th>Parceiro</th><th class="num">Valor</th><th>Chave Pix</th><th>Data de pagamento</th></tr></thead>
+      <tbody>${dados.lista.map(x => {
+        const repetido = jaTem(x.nome);
+        return `<tr class="${repetido ? 'lim-repetido' : ''}">
+        <td><input type="checkbox" class="lim-marca" data-limsel="${x.id}" ${repetido ? '' : 'checked'}></td>
+        <td><b>${esc(x.nome)}</b><span class="cf-meta">dia ${x.dia} no cadastro
+          ${repetido ? '<span class="cf-tag cf-rep">já incluído neste mês</span>' : ''}</span></td>
         <td class="num"><b>${brl(x.valor)}</b></td>
         <td><input class="inp mini" data-limpix="${x.id}" value="${esc(x.pix)}" placeholder="chave Pix"></td>
-        <td><input class="inp mini" type="date" data-limdata="${x.id}" value="${dataDo(x.dia)}"></td></tr>`).join('')}</tbody>
+        <td><input class="inp mini" type="date" data-limdata="${x.id}" value="${dataDo(x.dia)}"></td></tr>`;
+      }).join('')}</tbody>
     </table>
     <div class="pix-aviso">A chave fica salva no cadastro do parceiro e já vem preenchida nas próximas vezes.
       Quem ficar sem chave entra assim mesmo, e aparece no alerta de chave faltando.</div>
-    <div class="modal-pe"><span style="margin-right:auto;font-size:13px;color:var(--muted)">
-        ${dados.lista.length} pagamento(s) · <b style="color:var(--text);font-size:15px">${brl(total)}</b></span>
+    <div class="modal-pe"><span id="limResumo" style="margin-right:auto;font-size:13px;color:var(--muted)"></span>
       <button class="btn" data-fecharmodal>Cancelar</button>
       <button class="btn primary" id="btLimConfirmar">Incluir em Pagamentos</button></div>`);
 
+  /* o rodapé e o botão acompanham o que está marcado */
+  const marcados = () => $$('#cfModal [data-limsel]:checked').map(el => el.dataset.limsel);
+  function atualizar(){
+    const ids = marcados();
+    const soma = dados.lista.filter(x => ids.includes(x.id)).reduce((s,x) => s + x.valor, 0);
+    $('#limResumo').innerHTML = ids.length
+      ? `${ids.length} de ${dados.lista.length} marcado(s) · <b style="color:var(--text);font-size:15px">${brl(soma)}</b>`
+      : '<span style="color:var(--muted-2)">nenhum parceiro marcado</span>';
+    const bt = $('#btLimConfirmar');
+    bt.disabled = !ids.length;
+    bt.textContent = ids.length === 1 ? 'Incluir 1 em Pagamentos' : `Incluir ${ids.length} em Pagamentos`;
+    const todos = $('#limTodos');
+    todos.checked = ids.length === dados.lista.length;
+    todos.indeterminate = ids.length > 0 && ids.length < dados.lista.length;
+  }
+  $('#cfModal').addEventListener('change', e => {
+    if (e.target.id === 'limTodos'){
+      $$('#cfModal [data-limsel]').forEach(el => el.checked = e.target.checked);
+      return atualizar();
+    }
+    if (e.target.dataset.limsel !== undefined) atualizar();
+  });
+  atualizar();
+
   $('#btLimConfirmar').onclick = async () => {
+    const escolhidos = marcados();
+    if (!escolhidos.length) return;
     const pix = {}, quando = {};
     $$('#cfModal [data-limpix]').forEach(el => pix[el.dataset.limpix] = el.value.trim());
     $$('#cfModal [data-limdata]').forEach(el => quando[el.dataset.limdata] = el.value);
     fecharModal();
-    const ops = dados.lista.map(x => ({acao:'criar', dados:{
+    const ops = dados.lista.filter(x => escolhidos.includes(x.id)).map(x => ({acao:'criar', dados:{
       contribuinte: x.nome, valor: x.valor,
       dataPagamento: quando[x.id] || dataDo(x.dia),
       dataLancamento: getTodaySP(), status: 'Pendente', operacao: 'LIMINARES',
@@ -4237,8 +4279,10 @@ window.MPF_incluirLiminares = function(dados){
       acordo: `fechamento de ${dados.mesLabel} — controle de liminares`
     }}));
     await aplicar(ops, 'manual', `liminares: ${ops.length} pagamento(s) de ${dados.mesLabel}`);
-    // a chave digitada volta para o cadastro do parceiro no liminares
-    if (window.LIM_gravarPix) LIM_gravarPix(pix);
+    // a chave digitada volta para o cadastro de quem foi incluído
+    const soDosIncluidos = {};
+    escolhidos.forEach(id => soDosIncluidos[id] = pix[id]);
+    if (window.LIM_gravarPix) LIM_gravarPix(soDosIncluidos);
     toast(`${ops.length} pagamento(s) incluído(s) com a operação LIMINARES.`);
     go('lanc');
   };
@@ -9950,7 +9994,7 @@ function extratoAgrupado(lancs, d, recibo){
         <div class="fx-blk-h"><b>${esc(c.nome)}</b><span>${money(soma(ls))}</span></div>
         <table>${ls.map(l=>`<tr>
           <td class="d">${dataBR(l.data).slice(0,5)}</td>
-          <td class="op"><i class="fx-dot" style="background:${ciaColor(l.cia)}"></i>${esc(l.opRef||'—')}</td>
+          <td class="lim-op"><i class="fx-dot" style="background:${ciaColor(l.cia)}"></i>${esc(l.opRef||'—')}</td>
           <td class="m ${(+l.milhas||0)<0?'fx-neg':''}">${num(l.milhas)}</td>
           <td class="v ${(+l.resultado||0)<0?'fx-neg':''}">${money(l.resultado)}</td></tr>`).join('')}</table>
       </div>`};
