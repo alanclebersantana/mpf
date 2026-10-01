@@ -2521,7 +2521,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 16:33";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "01/10/2026 16:49";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -12845,6 +12845,37 @@ window.__erroAcesso = function(e, etapa, email, uid){
 
 
 
+  /* ---------- o que outra pessoa gravar aparece aqui ----------
+     O liminares era lido uma vez só, na entrada. Com mais de uma pessoa
+     usando, o que um cria não aparecia para o outro até recarregar. */
+  let escutando = false, timerRecarga = null;
+  function escutarMudancas(){
+    if (escutando || !fdb) return;
+    escutando = true;
+    const colecoes = ['parceiros', 'contas', 'operacoes', 'lancamentos', 'custos', 'pagamentos'];
+    colecoes.forEach(nome => {
+      let primeira = true;
+      COL(nome).onSnapshot(snap => {
+        if (primeira){ primeira = false; return; }       // o retrato inicial já veio na carga
+        if (snap.metadata && snap.metadata.hasPendingWrites) return;  // foi a gente mesmo
+        clearTimeout(timerRecarga);
+        timerRecarga = setTimeout(recarregarDeFora, 1200);
+      }, () => {});
+    });
+  }
+
+  /** recarrega sem atrapalhar quem está digitando */
+  async function recarregarDeFora(){
+    const digitando = RAIZ.contains(document.activeElement)
+      && /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || '');
+    if (digitando){ timerRecarga = setTimeout(recarregarDeFora, 4000); return; }
+    try {
+      const estado = await carregarComoAdmin();
+      S = estado; migrar(); refreshAll();
+      if (typeof renderAll === 'function') renderAll();   // os cards da visão geral acompanham
+    } catch(e){ console.warn('liminares: não consegui atualizar', e); }
+  }
+
   /* ---------- envio dos valores para Pagamentos ---------- */
   RAIZ.addEventListener('click', e => {
     if (e.target.closest('#btIncluirMP') && window.MPF_incluirLiminares){
@@ -12878,6 +12909,7 @@ window.__erroAcesso = function(e, etapa, email, uid){
         const estado = await carregarComoAdmin();
         window.__aplicarEstadoRemoto(estado, 'admin');
         pronto = true;
+        escutarMudancas();
       } catch(e) {
         console.warn('liminares:', e);
         const box = RAIZ.querySelector('#avisoLogin');
