@@ -313,6 +313,10 @@ html[data-tema="escuro"] .q-vdp{background:rgba(124,92,186,.24);color:#C4AEEC}
 .mini-det span{font-size:11.5px;font-weight:700}
 .mini-det .ja{color:var(--ok)}
 .mini-det .falta{color:var(--muted-2)}
+.mini-det .reemb{color:var(--accent-2);font-size:11px;font-weight:700}
+.sub-pl{display:block;font-style:normal;font-size:10.5px;color:#9FB6CC;font-weight:400}
+.dia .selo-reemb{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10px;
+  font-weight:800;background:var(--accent-dim);color:var(--accent-2)}
 .dia .selo-pago{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:800;
   background:var(--ok-dim);color:var(--ok)}
 .dia .selo-parc{background:var(--warn-dim);color:var(--warn)}
@@ -458,6 +462,8 @@ html[data-tema="escuro"] .q-vdp{background:rgba(124,92,186,.24);color:#C4AEEC}
         <div class="tit">Posição contratual</div>
         <div class="pl"><span>Recebimentos previstos</span><b class="e" id="bEnt">—</b></div>
         <div class="pl"><span>Pagamentos previstos</span><b class="s" id="bSai">—</b></div>
+        <div class="pl hide" id="bLimLin"><span>Liminares a pagar<i class="sub-pl" id="bLimSub"></i></span>
+          <b class="s" id="bLimVal">—</b></div>
         <div class="pl hide" id="bPrejLin"><span>Prejuízos registrados</span><b class="bq" id="bPrej">—</b></div>
         <div class="pl forte"><span>Posição contratual líquida</span><b id="bSaude">—</b></div>
       </div>
@@ -616,7 +622,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "01/10/2026 12:32";
+const VERSAO = "01/10/2026 15:20";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -1235,6 +1241,15 @@ function limFechamento(ym){
   };
 }
 
+/** o mês mais recente com lançamento no liminares, e quanto falta pagar */
+function limAPagar(){
+  const meses = [...new Set(S.limLanc.map(l => String(l.data || '').slice(0,7)))].filter(Boolean).sort();
+  if (!meses.length) return null;
+  const mes = meses[meses.length - 1];
+  const f = limFechamento(mes);
+  return f.aPagar ? {mes, total:f.aPagar, parceiros:f.lista.filter(x => x.saldo > 0).length} : null;
+}
+
 function pintarLiminares(){
   if (!$('#limCorpo')) return;
   const meses = [...new Set(S.limLanc.map(l => String(l.data || '').slice(0,7)))].filter(Boolean).sort().reverse();
@@ -1572,6 +1587,13 @@ function pintarBalanco(){
   $('#bMilhasBq').textContent = brl(est.bloqueados);
   const tp = totalPrej();
   $('#bPrejLin').classList.toggle('hide', !cent(tp));
+  // o que o controle de liminares deve aos parceiros, ainda fora do contas a pagar
+  const lim = limAPagar();
+  $('#bLimLin').classList.toggle('hide', !lim);
+  if (lim){
+    $('#bLimVal').textContent = brl(lim.total);
+    $('#bLimSub').textContent = `${mesNome(lim.mes)} · ${lim.parceiros} parceiro(s)`;
+  }
   $('#bPrej').textContent = brl(tp);
   $('#bPatrimonio').textContent = `Patrimônio total: ${brl(real(cent(saude) + cent(est.livres) + cent(est.bloqueados)))}`;
   $('#bEnt').textContent = brl(Calc.entradasFuturas());
@@ -1799,14 +1821,24 @@ function pintarMes(){
   $('#mSai').textContent = curto(dado.saidas);
   $('#mEntDet').innerHTML = `<span class="ja">Recebido ${curto(dado.recebido)}</span>
     <span class="falta">Falta ${curto(dado.aReceber)}</span>`;
+  const rbMes = S.reembolsos.filter(r => r.data.startsWith(S.mesSel));
+  const rbTotal = real(rbMes.reduce((s,r) => s + cent(r.valor), 0));
   $('#mSaiDet').innerHTML = `<span class="ja">Pago ${curto(dado.pago)}</span>
-    <span class="falta">Falta ${curto(dado.aPagar)}</span>`;
+    <span class="falta">Falta ${curto(dado.aPagar)}</span>
+    ${rbTotal ? `<span class="reemb">inclui ${curto(rbTotal)} de reembolsos</span>` : ''}`;
   $('#mRes').textContent = brl(dado.resultado);
   $('#mRes').style.color = dado.resultado < 0 ? '#FF9F97' : '#fff';
   $('#mNota').textContent = `${mesNome(S.mesSel)} · ${dado.ent.length} entrada(s) e ${dado.sai.length} saída(s)`;
 
   const porDia = {};
   dado.ent.forEach(r => { const d = dataRec(r); const x = (porDia[d] = porDia[d] || {e:0,s:0,n:0}); x.e += cent(valorRec(r)); });
+  const porDiaRb = {};
+  // o reembolso sai no dia em que foi devolvido, como no computador
+  S.reembolsos.filter(r => r.data.startsWith(S.mesSel)).forEach(r => {
+    porDiaRb[r.data] = (porDiaRb[r.data] || 0) + cent(r.valor);
+    const x = (porDia[r.data] = porDia[r.data] || {e:0, s:0, n:0, pago:0, nPago:0});
+    x.s += cent(r.valor); x.pago = (x.pago || 0) + cent(r.valor);
+  });
   dado.sai.forEach(r => { const d = r.dataPagamento; const x = (porDia[d] = porDia[d] || {e:0,s:0,n:0,pago:0,nPago:0});
     x.s += cent(r.valor); x.n++;
     if (r.status === 'Pago'){ x.pago = (x.pago || 0) + cent(r.valor); x.nPago = (x.nPago || 0) + 1; } });
@@ -1815,7 +1847,8 @@ function pintarMes(){
   const maior = Math.max(1, ...dias.map(d => Math.max(porDia[d].e, porDia[d].s)));
   $('#mDias').innerHTML = dias.length
     ? dias.map(d => { acum += porDia[d].e - porDia[d].s;
-        return linhaDia(d, real(porDia[d].e), real(porDia[d].s), porDia[d].n, real(acum), maior, d === hojeSP(), porDia[d]); }).join('')
+        return linhaDia(d, real(porDia[d].e), real(porDia[d].s), porDia[d].n, real(acum), maior, d === hojeSP(),
+          {...porDia[d], reemb: porDiaRb[d] || 0}); }).join('')
     : '<div class="vazio">Sem movimento no mês.</div>';
   irParaHojeNaLista();
 
@@ -1824,9 +1857,10 @@ function pintarMes(){
 /** um dia do caixa: entra, sai e saldo em colunas próprias, sem texto cortado */
 function linhaDia(data, entra, sai, qtdSaidas, acumulado, maior, ehHoje, det){
   const nPago = det ? (det.nPago || 0) : 0;
-  const selo = !qtdSaidas || !nPago ? ''
+  const selo = (!qtdSaidas || !nPago ? ''
     : nPago === qtdSaidas ? '<span class="selo-pago">tudo pago</span>'
-    : `<span class="selo-pago selo-parc">${nPago} de ${qtdSaidas} pago(s)</span>`;
+    : `<span class="selo-pago selo-parc">${nPago} de ${qtdSaidas} pago(s)</span>`)
+    + (det && det.reemb ? '<span class="selo-reemb">inclui reembolso</span>' : '');
   const saldo = real(cent(entra) - cent(sai));
   const barra = !maior ? '' : `<div class="barras">
       <i class="be" style="width:${Math.max(entra ? 2 : 0, cent(entra)/maior*100).toFixed(1)}%"></i>

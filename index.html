@@ -759,6 +759,12 @@ html[data-tema="escuro"] .op-chip.q-vdp{background:rgba(124,92,186,.24);color:#C
 .cf-op:hover{border-color:var(--accent);background:var(--accent-dim)}
 .modal-pe{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
 #kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px;max-width:720px}
+.kpi.lig{border-left:3px solid var(--accent);cursor:pointer}
+.kpi.lig:hover{background:var(--accent-dim)}
+.kpi-ir{display:inline-block;margin-top:7px;font-size:11.5px;font-weight:800;color:var(--accent-2)}
+.pl-sub{display:block;font-size:11px;color:var(--muted-2);font-weight:400}
+.pl-lin.fraca{opacity:.8}
+.pl-ja{display:block;font-size:10.5px;color:var(--muted-2);text-align:right;width:100%}
 .kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px}
 .kpi .lab{color:var(--muted-2);font-size:11.5px;font-weight:700}
 .kpi .val{font-size:22px;font-weight:800;letter-spacing:-.4px;margin-top:3px;white-space:nowrap}
@@ -1042,7 +1048,12 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 #view-mensal .mn-fx .br{display:flex;flex-direction:column;gap:4px;opacity:.85}
 #view-mensal .mn-fx .br span{height:5px;border-radius:3px;display:block;min-width:2px}
 #view-mensal .mn-fx .v{font-variant-numeric:tabular-nums}
-#view-mensal .mn-fx .selo-ok{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;
+#view-mensal .mn-bl.lim{border-left:3px solid var(--warn);cursor:pointer}
+.mn-bl.lim:hover{background:var(--warn-dim)}
+.mn-ir{font-size:11.5px;font-weight:800;color:var(--accent-2)}
+.mn-fx .selo-rb{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;
+  font-size:9.5px;font-weight:800;background:var(--accent-dim);color:var(--accent-2);vertical-align:middle}
+.mn-fx .selo-ok{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;
   font-size:9.5px;font-weight:800;background:var(--ok-dim);color:var(--ok);vertical-align:middle}
 #view-mensal .mn-fx .br .in{background:var(--ok)}
 #view-mensal .mn-fx .br .out{background:var(--accent)}
@@ -2510,7 +2521,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 11:48";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "01/10/2026 15:20";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -3133,13 +3144,29 @@ function renderDash(){
   const entraHoje = MotorFinanceiroMP.aReceberEm(hojeSP), saiHoje = MotorFinanceiroMP.aPagarEm(hojeSP);
   const negativos = MotorFinanceiroMP.diasNegativos();
 
+  // o que vem de fora do contas a pagar
+  const lim = (window.LIM && LIM.aPagar) ? LIM.aPagar() : null;
+  const mesAgora = getTodaySP().slice(0,7);
+  const rbMes = reembolsosDoMes(mesAgora);
+  const rbTotal = totalReembolsos(rbMes);
+
   if (existe('kpis')) $('#kpis').innerHTML = `
     <div class="kpi"><div class="lab">Recebimentos previstos hoje</div>
       <div class="val" style="color:var(--ok)">${brlShort(entraHoje)}</div>
       <div class="note">${S.rec.filter(r => dataRec(r) === hojeSP && ABERTO_REC(r)).length} recebimento(s) · ${fmtDate(hojeSP)}</div></div>
     <div class="kpi"><div class="lab">Pagamentos previstos hoje</div>
       <div class="val" style="color:var(--accent-2)">${brlShort(saiHoje)}</div>
-      <div class="note">${S.rows.filter(r => r.dataPagamento === hojeSP && ABERTO(r)).length} pagamento(s) · ${fmtDate(hojeSP)}</div></div>`;
+      <div class="note">${S.rows.filter(r => r.dataPagamento === hojeSP && ABERTO(r)).length} pagamento(s) · ${fmtDate(hojeSP)}</div></div>
+    ${!lim || !lim.total ? '' : `<div class="kpi lig" data-irlim="1" title="Abrir o Fechamento do controle de liminares">
+      <div class="lab">Liminares — a pagar aos parceiros</div>
+      <div class="val" style="color:var(--warn)">${brlShort(lim.total)}</div>
+      <div class="note">${lim.parceiros} parceiro(s) · ${esc(lim.mesLabel)}</div>
+      <span class="kpi-ir">ainda não lançado em Pagamentos →</span></div>`}
+    ${!rbTotal ? '' : `<div class="kpi lig" data-irreemb="1" title="Abrir a página de reembolsos">
+      <div class="lab">Reembolsos devolvidos</div>
+      <div class="val" style="color:var(--accent-2)">${brlShort(rbTotal)}</div>
+      <div class="note">${rbMes.length} lançamento(s) em ${mesLongo(mesAgora)}</div>
+      <span class="kpi-ir">já somado nas saídas →</span></div>`}`;
 
 
 
@@ -4522,6 +4549,13 @@ $('#cfLimpar').addEventListener('click', () => {
   S.cfQ = ''; S.cfData = ''; S.cfSit = '';
   $('#cfQ').value = '';
   renderConferencia();
+});
+$('#view-mensal').addEventListener('click', e => {
+  if (e.target.closest('[data-irlimfx]')){ go('lim'); if (window.LIM) LIM.irPara('painel'); }
+});
+$('#kpis').addEventListener('click', e => {
+  if (e.target.closest('[data-irlim]')){ go('lim'); if (window.LIM) LIM.irPara('painel'); return; }
+  if (e.target.closest('[data-irreemb]')) return go('reemb');
 });
 $('#cfAbas').addEventListener('click', e => {
   const b = e.target.closest('[data-cfaba]');
@@ -8212,7 +8246,15 @@ Object.assign(Balanco, {
   entradasFuturas(){ return fromCents(S.rec.filter(ABERTO_REC).reduce((s,r) => s + toCents(r.valor), 0)); },
   saidasFuturas(){ return fromCents(S.rows.filter(ABERTO).reduce((s,r) => s + toCents(r.valor), 0)); },
   prejuizos(){ return totalPrejuizos(); },
-  lucroPrevisto(){ return subtractMoney(subtractMoney(this.entradasFuturas(), this.saidasFuturas()), this.prejuizos()); },
+  /** o que o controle de liminares deve aos parceiros e ainda não virou lançamento */
+  liminaresAPagar(){
+    const x = (window.LIM && LIM.aPagar) ? LIM.aPagar() : null;
+    return x && x.total ? x.total : 0;
+  },
+  lucroPrevisto(){
+    return subtractMoney(subtractMoney(subtractMoney(this.entradasFuturas(), this.saidasFuturas()),
+      this.prejuizos()), this.liminaresAPagar());
+  },
   estoque(){
     const itens = estoqueBase().itens || [];
     const soma = f => fromCents(itens.filter(f).reduce((s,i) => s + toCents(totalItem(i)), 0));
@@ -8255,6 +8297,8 @@ Object.assign(Balanco, {
 /* ---------- desenho dos blocos ---------- */
 function renderPainelPlanilha(){
   const e = Balanco.estoque(), fp = Balanco.futurosPagamentos();
+  const lim = (window.LIM && LIM.aPagar) ? LIM.aPagar() : null;
+  const rbMes = reembolsosDoMes(getTodaySP().slice(0,7));
   const entradas = Balanco.entradasFuturas(), saidas = Balanco.saidasFuturas(), lucro = Balanco.lucroPrevisto();
 
   $('#balCaixa').innerHTML = `
@@ -8263,7 +8307,14 @@ function renderPainelPlanilha(){
       <div class="pl-lin"><span>Recebimentos previstos</span><b class="pl-e">${brl(entradas)}</b></div>
       <div class="pl-lin"><span>Pagamentos previstos</span><b class="pl-s">${brl(saidas)}</b></div>
       ${toCents(Balanco.prejuizos()) ? `<div class="pl-lin"><span>Prejuízos registrados</span><b class="pl-s">${brl(Balanco.prejuizos())}</b></div>` : ''}
+      ${!lim || !lim.total ? '' : `<div class="pl-lin"><span>Liminares a pagar aos parceiros
+        <small class="pl-sub">${esc(lim.mesLabel)} · ${lim.parceiros} parceiro(s)</small></span>
+        <b class="pl-s">${brl(lim.total)}</b></div>`}
       <div class="pl-lin destaque"><span>Posição contratual líquida</span><b class="${lucro < 0 ? 'bl-neg' : 'bl-pos'}">${brl(lucro)}</b></div>
+      ${!rbMes.length ? '' : `<div class="pl-lin fraca"><span>Reembolsos do mês
+        <small class="pl-sub">${rbMes.length} lançamento(s)</small></span>
+        <b class="pl-s">${brl(totalReembolsos(rbMes))}</b>
+        <small class="pl-ja">já dentro dos pagamentos</small></div>`}
       <div class="pl-exp">Contas a receber previstas menos contas a pagar previstas. Não é caixa, lucro nem patrimônio.</div>
     </div>
     <div class="pl-bloco">
@@ -9208,6 +9259,16 @@ const Mensal = (() => {
         ${R.atrP ? `<div class="mn-lin alerta"><span>vencido e não pago (${R.nAtrP})</span><b>${brlC(R.atrP)}</b></div>` : ''}
         <div class="mn-lin"><span>vs ${antCurto}</span><b>${compara(R.saidas, P.saidas, true)}</b></div>
       </div>
+      ${(() => {
+        const lim = (window.LIM && LIM.aPagar) ? LIM.aPagar() : null;
+        if (!lim || !lim.total || lim.mes !== chave) return '';
+        return `<div class="mn-bl lim" data-irlimfx="1" title="Abrir o Fechamento do controle de liminares">
+          <div class="lab">Liminares do mês</div>
+          <div class="big" style="color:var(--warn)">${brlC(lim.total)}</div>
+          <div class="mn-lin"><span>${lim.parceiros} parceiro(s) aguardando</span><b>fora do fluxo</b></div>
+          <div class="mn-lin"><span class="mn-ir">incluir em Pagamentos →</span></div>
+        </div>`;
+      })()}
       <div class="mn-bl res">
         <div class="lab">Fluxo líquido do mês (entradas − saídas)</div>
         <div class="big ${R.resultado < 0 ? 'mn-neg' : 'mn-pos'}">${sinal(R.resultado)}</div>
@@ -9218,6 +9279,9 @@ const Mensal = (() => {
 
     // fluxo diário
     const fx = fluxoDiario(R);
+    // os dias que tiveram devolução, para marcar a linha
+    const rbDia = {};
+    reembolsosDoMes(chave).forEach(r => rbDia[r.data] = (rbDia[r.data] || 0) + toC(r.valor));
     const maxD = Math.max(1, ...fx.map(x => Math.max(x.e, x.s)));
     const negs = fx.filter(x => x.saldo < 0 && x.s > 0);
     el('pnlFluxo').classList.toggle('alerta', negs.length > 0);
@@ -9229,7 +9293,8 @@ const Mensal = (() => {
           <div class="d"><b>${x.data.slice(8)}/${x.data.slice(5,7)}</b><small>${diaSemana(x.data)}</small></div>
           <div class="br"><span class="in" style="width:${(x.e/maxD*100).toFixed(1)}%"></span><span class="out" style="width:${(x.s/maxD*100).toFixed(1)}%"></span></div>
           <div class="v ${x.e ? 'mn-e' : 'mn-mut'} ${x.e && x.eReal < x.e ? 'mn-prev' : ''}">${brlC(x.e)}</div>
-          <div class="v ${x.s ? 'mn-s' : 'mn-mut'} ${x.s && x.sReal < x.s ? 'mn-prev' : ''}">${brlC(x.s)}</div>
+          <div class="v ${x.s ? 'mn-s' : 'mn-mut'} ${x.s && x.sReal < x.s ? 'mn-prev' : ''}">${brlC(x.s)}
+            ${rbDia[x.data] ? `<small class="selo-rb" title="${brlC(fromCents(rbDia[x.data]))} devolvidos neste dia">reemb.</small>` : ''}</div>
           <div class="v ${x.sReal ? 'mn-e' : 'mn-mut'}">${!x.s ? '—'
             : x.sReal === x.s ? '<small class="selo-ok">tudo pago</small>'
             : x.sReal ? brlC(x.sReal) : '<span class="mn-mut">a pagar</span>'}</div>
@@ -12797,6 +12862,23 @@ window.__erroAcesso = function(e, etapa, email, uid){
       }
     },
     irPara: destino => irPara(destino),
+
+    /** quanto falta pagar aos parceiros no mês mais recente com lançamento */
+    aPagar: () => {
+      try {
+        const meses = [...new Set((S.lancamentos || []).map(l => mesKey(l.data)))].filter(Boolean).sort();
+        if (!meses.length) return null;
+        const mk_ = meses[meses.length - 1];
+        const d = agrupar(mk_, true);
+        const fila = d.responsaveis.filter(r => r.id && r.saldo > 0);
+        return {
+          mes: mk_, mesLabel: mesLabel(mk_),
+          total: Math.round(fila.reduce((s,r) => s + r.saldo, 0) * 100) / 100,
+          parceiros: fila.length,
+          resultado: Math.round((d.total || 0) * 100) / 100
+        };
+      } catch(e){ return null; }
+    },
     estado: () => S,
     recarregar: async () => { if (fdb) { S = await carregarComoAdmin(); migrar(); refreshAll(); } }
   };
