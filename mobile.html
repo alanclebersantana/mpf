@@ -173,8 +173,15 @@ html[data-tema="escuro"] .q-vdp{background:rgba(124,92,186,.24);color:#C4AEEC}
   border-radius:999px;padding:1px 8px;font-size:10px;font-weight:800}
 .pil-ok{display:inline-block;margin-left:7px;background:var(--ok-dim);color:var(--ok);
   border-radius:999px;padding:1px 8px;font-size:10px;font-weight:800}
-.bt-baixa{display:block;margin-top:5px;padding:5px 12px;border-radius:8px;background:var(--accent);
-  color:#fff;font-size:11.5px;font-weight:800}
+.linha-bx{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-soft)}
+.linha-bx:last-child{border:none}
+.linha-bx .esq{flex:1;min-width:0}
+.linha-bx .esq b{display:block;font-size:14px}
+.linha-bx .esq span{display:block;font-size:11.5px;color:var(--muted-2)}
+.dir-bx{flex:0 0 132px;display:flex;flex-direction:column;align-items:stretch;gap:6px;text-align:right}
+.dir-bx b{font-size:14.5px;white-space:nowrap}
+.bt-baixa{width:100%;height:32px;border-radius:8px;background:var(--accent);
+  color:#fff;font-size:12px;font-weight:800}
 .aviso-pix{background:var(--surface-2);border-radius:9px;padding:10px 12px;font-size:12.5px;margin-bottom:12px}
 .opcoes button.novo{background:var(--accent-dim);border-color:#EBD3C2;color:var(--accent-2)}
 .pj-bts{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:10px}
@@ -609,7 +616,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "01/10/2026 12:18";
+const VERSAO = "01/10/2026 12:32";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -1284,10 +1291,10 @@ function pintarLiminares(){
     <div class="card"><h2>A pagar aos parceiros</h2>
       ${fila.length ? fila.map(x => {
         const p = S.limParceiros.find(y => y.id === x.id) || {};
-        return `<div class="linha"><div class="esq"><b>${esc(x.nome)}</b>
+        return `<div class="linha-bx"><div class="esq"><b>${esc(x.nome)}</b>
           <span>${p.pix ? esc(p.pix) : 'sem chave Pix no cadastro'}</span>
           ${x.pago ? `<span>já recebeu ${brl(real(x.pago))}</span>` : ''}</div>
-          <div class="dir"><b class="sai">${brl(real(x.saldo))}</b>
+          <div class="dir-bx"><b class="sai">${brl(real(x.saldo))}</b>
             ${podeEditar() ? `<button class="bt-baixa" data-limbaixa="${x.id}|${mes}|${real(x.saldo)}">Dar baixa</button>` : ''}</div></div>`;
       }).join('') : '<div class="vazio">Nada pendente neste mês.</div>'}
     </div>
@@ -1978,7 +1985,7 @@ $('#btNovo').addEventListener('click', abrirNovo);
 function abrirMais(){
   abrirFolha(`<h3>Mais</h3><div class="sub">versão ${VERSAO} · ${esc(APP.nome || '')} (${esc(APP.papel)})</div>
     <div class="opcoes">
-      ${!podeVer('reemb') ? '' : `<button data-ir="reemb" class="novo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h13a4 4 0 0 1 0 8h-5"/><path d="M7 6l-4 4 4 4"/></svg>Reembolsos 123 e VDP</button>`}
+      ${!podeVer('reemb') ? '' : `<button data-ir="reemb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h13a4 4 0 0 1 0 8h-5"/><path d="M7 6l-4 4 4 4"/></svg>Reembolsos 123 e VDP</button>`}
       ${!podeVer('lim') ? '' : `<button data-ir="lim" class="novo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 4.4-3.1 7.9-8 9-4.9-1.1-8-4.6-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg>Controle de liminares</button>`}
       ${!podeVer('prej') ? '' : `<button data-ir="prej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Prejuízos</button>`}
       ${!podeVer('adi') ? '' : `<button data-ir="adi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>Lotes e adiantamentos</button>`}
