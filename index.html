@@ -2521,7 +2521,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 15:20";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "01/10/2026 16:33";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2865,10 +2865,12 @@ const Local = {
   get(k){ try { const v = localStorage.getItem(k); if (v != null) return v; } catch(e){} return MEM[k] ?? null; },
   set(k,v){ MEM[k] = v; try { localStorage.setItem(k,v); } catch(e){} }
 };
-let fdb = null, fauth = null, unsubRows = null, unsubRec = null, unsubSaldo = null, unsubEstoque = null, unsubLim = null, unsubLotes = null, unsubOps = null, unsubVendas = null, unsubPrej = null, unsubAdi = null, unsubLog = null, unsubUsers = null, unsubResp = null, unsubRodada = null, unsubReemb = null;
+let fdb = null, fauth = null, unsubRows = null, unsubRec = null, unsubSaldo = null, unsubEstoque = null, unsubLim = null, unsubLotes = null, unsubOps = null, unsubVendas = null, unsubPrej = null, unsubAdi = null, unsubLog = null, unsubUsers = null, unsubResp = null, unsubRodada = null, unsubReemb = null, unsubMeu = null;
 
 const Repo = {
   async escutar(){
+    // com acesso parcial, só escuta o que a pessoa pode ler — o resto o banco recusaria
+    const posso = v => typeof podeVer !== 'function' || podeVer(v);
     if (APP.modo === 'nuvem'){
       unsubRows && unsubRows();
       unsubRows = fdb.collection('lancamentos').onSnapshot(snap => {
@@ -2877,10 +2879,14 @@ const Repo = {
         marcarSync(true); renderAll();
       }, err => {
         marcarSync(false);
-        if (err.code === 'permission-denied' && !Repo._retentou){
-          Repo._retentou = true;
-          setTimeout(() => { dadosLigados = false; ligarDados(); }, 1800);
-          return;
+        if (err.code === 'permission-denied'){
+          // sem acesso àquela página, o silêncio é o certo
+          if (APP.papel === 'parcial') return;
+          if (!Repo._retentou){
+            Repo._retentou = true;
+            setTimeout(() => { dadosLigados = false; ligarDados(); }, 1800);
+            return;
+          }
         }
         toast('Sincronia interrompida: ' + err.code);
       });
@@ -6266,11 +6272,17 @@ async function entrarNuvem(user){
   ref.onSnapshot(d => {
     const p = (d.data()||{}).papel || 'pendente';
     if (p === APP.papel) return;
-    APP.papel = p; mostrarQuem(); modoChat(); renderAll();
+    APP.papel = p;
+    APP.paginas = (d.data()||{}).paginas || [];
+    mostrarQuem(); modoChat(); renderAll();
+    if (typeof aplicarAcesso === 'function') aplicarAcesso();
     verificarLiberacao() ? ligarDados() : desligarDados();
   });
-  APP.papel = (await ref.get()).data().papel;
+  const meu = (await ref.get()).data() || {};
+  APP.papel = meu.papel;
+  APP.paginas = meu.paginas || [];
   mostrarQuem(); modoChat();
+  if (typeof aplicarAcesso === 'function') aplicarAcesso();
   if (!verificarLiberacao()) return;
   await ligarDados();
 }
@@ -6280,10 +6292,14 @@ let dadosLigados = false;
 async function ligarDados(){
   if (APP.papel === 'admin' && !unsubUsers){
     unsubUsers = fdb.collection('usuarios').onSnapshot(s => { S.users = s.docs.map(d => d.data()); if (S.view === 'users') renderUsers(); });
-    fdb.collection('usuarios').doc(APP.uid).onSnapshot(doc => {
-      const meu = doc.data() || {};
-      APP.paginas = meu.paginas || [];
+  }
+  // as páginas liberadas valem para qualquer pessoa, não só para o administrador
+  if (!unsubMeu){
+    unsubMeu = fdb.collection('usuarios').doc(APP.uid).onSnapshot(doc => {
+      APP.paginas = (doc.data() || {}).paginas || [];
       if (typeof aplicarAcesso === 'function') aplicarAcesso();
+      // marcar as páginas depois da entrada já libera a tela
+      if (APP.papel === 'parcial' && APP.paginas.length) $('#gate').classList.add('hide');
     }, () => {});
   }
   if (!dadosLigados){
@@ -6302,6 +6318,14 @@ function desligarDados(){
   renderAll();
 }
 function verificarLiberacao(){
+  if (APP.papel === 'parcial' && !(APP.paginas || []).length){
+    $('#gate').classList.remove('hide');
+    $('#gateSub').textContent = 'Seu acesso está liberado, mas nenhuma página foi marcada ainda. Peça ao administrador para escolher as páginas em Usuários.';
+    $('#gateStat').textContent = APP.email;
+    $('#btnIn').classList.add('hide');
+    $('#blocoSenha').classList.add('hide'); $('#formSenha').classList.add('hide');
+    return false;
+  }
   if (APP.papel === 'pendente'){
     $('#gate').classList.remove('hide');
     $('#gateSub').textContent = 'Seu acesso foi solicitado. Um administrador precisa liberar para você ver os dados.';

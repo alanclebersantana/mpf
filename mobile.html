@@ -622,7 +622,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "01/10/2026 15:20";
+const VERSAO = "01/10/2026 16:33";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -2557,6 +2557,8 @@ async function entrar(user){
   const inicial = ADMINS.map(e => e.toLowerCase()).includes(APP.email.toLowerCase()) ? 'admin' : 'pendente';
   if (!doc.exists) await ref.set({uid:user.uid, nome:APP.nome, email:APP.email, papel:inicial, em:Date.now()});
   else await ref.set({nome:APP.nome, email:APP.email, em:Date.now()}, {merge:true});
+  // as páginas liberadas precisam estar em mãos antes de montar o menu
+  APP.paginas = (doc.exists ? (doc.data() || {}).paginas : []) || [];
   ref.onSnapshot(d => {
     const papel = (d.data() || {}).papel || 'pendente';
     APP.paginas = (d.data() || {}).paginas || [];
