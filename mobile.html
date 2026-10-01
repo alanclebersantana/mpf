@@ -554,7 +554,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "30/09/2026 09:29";
+const VERSAO = "01/10/2026 11:35";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -607,6 +607,22 @@ const fmtCurta = iso => { if (!iso) return '—'; const [a,m,d] = iso.split('-')
 const mesNome = ym => { const [a,m] = String(ym).split('-'); return `${MESES[+m-1]} de ${a}`; };
 const hora = ts => new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 const podeEditar = () => APP.papel === 'admin' || APP.papel === 'operador';
+
+/* ---------- acesso por página ----------
+   O papel "parcial" enxerga só as telas liberadas no cadastro dele.
+   Os nomes aqui são os do celular; a tela "lim" só existe no computador. */
+const EQUIV = {bal:'bal', mes:'mensal', lanc:'lanc', rec:'rec', est:'est', prej:'prej', adi:'adi', log:'log'};
+const podeVer = tela => APP.papel !== 'parcial'
+  || (APP.paginas || []).includes(EQUIV[tela] || tela);
+
+/** some do menu o que a pessoa não pode abrir */
+function aplicarAcesso(){
+  $$('#barra button[data-tela]').forEach(b => b.classList.toggle('hide', !podeVer(b.dataset.tela)));
+  if (!podeVer(S.tela)){
+    const primeira = ['bal','mes','lanc','rec','est','prej','adi','log'].find(podeVer);
+    if (primeira) irPara(primeira);
+  }
+}
 
 function recado(txt){
   const el = $('#recado'); el.textContent = txt; el.classList.add('on');
@@ -1676,6 +1692,11 @@ function abrirEdicao(tipo, id){
    INTERAÇÃO
    ========================================================= */
 function irPara(tela){
+  if (!podeVer(tela)){
+    const primeira = ['bal','mes','lanc','rec','est','prej','adi','log'].find(podeVer);
+    if (!primeira || primeira === tela) return;
+    return irPara(primeira);
+  }
   S.tela = tela;
   $$('.tela').forEach(s => s.classList.toggle('on', s.id === 'tela-' + tela));
   $$('#barra button[data-tela]').forEach(b => b.classList.toggle('on', b.dataset.tela === tela));
@@ -1724,9 +1745,9 @@ $('#btNovo').addEventListener('click', abrirNovo);
 function abrirMais(){
   abrirFolha(`<h3>Mais</h3><div class="sub">versão ${VERSAO} · ${esc(APP.nome || '')} (${esc(APP.papel)})</div>
     <div class="opcoes">
-      <button data-ir="prej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Prejuízos</button>
-      <button data-ir="adi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>Lotes e adiantamentos</button>
-      <button data-ir="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Auditoria</button>
+      ${!podeVer('prej') ? '' : `<button data-ir="prej"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>Prejuízos</button>`}
+      ${!podeVer('adi') ? '' : `<button data-ir="adi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M13 3L4 14h7l-1 7 9-11h-7l1-7z"/></svg>Lotes e adiantamentos</button>`}
+      ${!podeVer('log') ? '' : `<button data-ir="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>Auditoria</button>`}
       <button data-tema2="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>Trocar tema</button>
       <button data-abrirpc="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8"/></svg>Versão completa</button>
       <button data-instalar="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12M8 11l4 4 4-4M5 21h14"/></svg>Instalar app</button>
@@ -2233,9 +2254,10 @@ async function entrar(user){
   else await ref.set({nome:APP.nome, email:APP.email, em:Date.now()}, {merge:true});
   ref.onSnapshot(d => {
     const papel = (d.data() || {}).papel || 'pendente';
-    if (papel === APP.papel) return;
-    APP.papel = papel;
-    liberar();
+    APP.paginas = (d.data() || {}).paginas || [];
+    if (papel !== APP.papel){ APP.papel = papel; liberar(); }
+    // o menu precisa refletir o acesso mesmo quando só as páginas mudam
+    if (typeof aplicarAcesso === 'function') aplicarAcesso();
   });
   APP.papel = (await ref.get()).data().papel || 'pendente';
   liberar();
