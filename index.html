@@ -704,6 +704,11 @@ html[data-tema="escuro"] .tela-lim{background:rgba(242,194,48,.2);color:#E8C765}
 .cell-sb input{width:100%;border:none;background:transparent;font:inherit;font-weight:inherit;outline:none;padding:0}
 .cell-sb input.num{text-align:right}
 .sb-add{margin-top:8px;font-size:12.5px;font-weight:800;color:var(--accent-2)}
+.mn-linha2{display:grid;grid-template-columns:minmax(300px,1.1fr) 2fr;gap:14px;margin-bottom:14px;align-items:stretch}
+.mn-linha2 .mn-bal{margin-bottom:0}
+.mn-linha2 #kpis{margin-bottom:0;max-width:none;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.mn-linha2 .kpi{display:flex;flex-direction:column;justify-content:center}
+@media (max-width:1100px){.mn-linha2{grid-template-columns:1fr}}
 .mn-bl.banco{border-left:3px solid var(--ok);cursor:pointer}
 .mn-bl.banco:hover{background:var(--ok-dim)}
 .mn-velho{color:var(--warn)}
@@ -1052,7 +1057,7 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
 #view-mensal .mn-pos{color:var(--ok)} #view-mensal .mn-neg{color:var(--bad)} #view-mensal .mn-mut{color:var(--muted-2)}
 #view-mensal .mn-prev{font-style:italic}
 
-#view-mensal .mn-bal{display:grid;grid-template-columns:1fr 1fr 1.1fr;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
+#view-mensal .mn-bal{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin-bottom:14px}
 #view-mensal .mn-bl{padding:16px 18px;min-width:0}
 #view-mensal .mn-bl + .mn-bl{border-left:1px solid var(--line)}
 #view-mensal .mn-bl .lab{font-size:12.5px;font-weight:800;color:var(--muted)}
@@ -1560,7 +1565,10 @@ try { document.documentElement.dataset.tema =
 
       <div class="mn-bal" id="mn-bal"></div>
 
-      <div class="kpis" id="kpis"></div>
+      <div class="mn-linha2">
+        <div class="mn-bal mn-res-wrap" id="mn-res"></div>
+        <div class="kpis" id="kpis"></div>
+      </div>
 
       <div class="grid2">
         <div class="panel"><h3>Pontos de atenção do mês</h3><div class="mn-at" id="mn-atencao"></div></div>
@@ -2575,7 +2583,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "02/10/2026 11:08";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "02/10/2026 11:44";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -3234,11 +3242,6 @@ function renderDash(){
     <div class="kpi"><div class="lab">Pagamentos previstos hoje</div>
       <div class="val" style="color:var(--accent-2)">${brlShort(saiHoje)}</div>
       <div class="note">${S.rows.filter(r => r.dataPagamento === hojeSP && ABERTO(r)).length} pagamento(s) · ${fmtDate(hojeSP)}</div></div>
-    ${!lim || !lim.total ? '' : `<div class="kpi lig" data-irlim="1" title="Abrir o Fechamento do controle de liminares">
-      <div class="lab">Liminares — a pagar aos parceiros</div>
-      <div class="val" style="color:var(--warn)">${brlShort(lim.total)}</div>
-      <div class="note">${lim.parceiros} parceiro(s) · ${esc(lim.mesLabel)}</div>
-      <span class="kpi-ir">ainda não lançado em Pagamentos →</span></div>`}
     ${!rbTotal ? '' : `<div class="kpi lig" data-irreemb="1" title="Abrir a página de reembolsos">
       <div class="lab">Reembolsos devolvidos</div>
       <div class="val" style="color:var(--accent-2)">${brlShort(rbTotal)}</div>
@@ -8530,9 +8533,10 @@ Object.assign(Balanco, {
   },
   saldoBancario(){ return saldoBancario(); },
   lucroPrevisto(){
-    // o saldo que já está na conta entra cheio, como início do dia
-    return addMoney(subtractMoney(subtractMoney(subtractMoney(this.entradasFuturas(), this.saidasFuturas()),
-      this.prejuizos()), this.liminaresAPagar()), this.saldoBancario());
+    // o saldo que já está na conta entra cheio, como início do dia.
+    // As liminares só contam quando viram lançamento em Pagamentos.
+    return addMoney(subtractMoney(subtractMoney(this.entradasFuturas(), this.saidasFuturas()),
+      this.prejuizos()), this.saldoBancario());
   },
   estoque(){
     const itens = estoqueBase().itens || [];
@@ -8663,9 +8667,7 @@ function renderPainelPlanilha(){
       <div class="pl-lin"><span>Recebimentos previstos</span><b class="pl-e">${brl(entradas)}</b></div>
       <div class="pl-lin"><span>Pagamentos previstos</span><b class="pl-s">${brl(saidas)}</b></div>
       ${toCents(Balanco.prejuizos()) ? `<div class="pl-lin"><span>Prejuízos registrados</span><b class="pl-s">${brl(Balanco.prejuizos())}</b></div>` : ''}
-      ${!lim || !lim.total ? '' : `<div class="pl-lin"><span>Liminares a pagar aos parceiros
-        <small class="pl-sub">${esc(lim.mesLabel)} · ${lim.parceiros} parceiro(s)</small></span>
-        <b class="pl-s">${brl(lim.total)}</b></div>`}
+
       <div class="pl-lin destaque"><span>Posição contratual líquida</span><b class="${lucro < 0 ? 'bl-neg' : 'bl-pos'}">${brl(lucro)}</b></div>
       ${!rbMes.length ? '' : `<div class="pl-lin fraca"><span>Reembolsos do mês
         <small class="pl-sub">${rbMes.length} lançamento(s)</small></span>
@@ -9632,6 +9634,8 @@ const Mensal = (() => {
           <div class="mn-lin"><span class="mn-ir">incluir em Pagamentos →</span></div>
         </div>`;
       })()}
+      </div>`;
+    el('res').innerHTML = `
       <div class="mn-bl res">
         <div class="lab">Fluxo líquido do mês (entradas − saídas)</div>
         <div class="big ${R.resultado < 0 ? 'mn-neg' : 'mn-pos'}">${sinal(R.resultado)}</div>
