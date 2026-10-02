@@ -2599,7 +2599,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "02/10/2026 11:52";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "02/10/2026 13:31";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -4580,13 +4580,13 @@ window.MPF_incluirLiminares = function(dados){
     todos.checked = ids.length === dados.lista.length;
     todos.indeterminate = ids.length > 0 && ids.length < dados.lista.length;
   }
-  $('#cfModal').addEventListener('change', e => {
+  $('#cfModal').onchange = e => {
     if (e.target.id === 'limTodos'){
       $$('#cfModal [data-limsel]').forEach(el => el.checked = e.target.checked);
       return atualizar();
     }
     if (e.target.dataset.limsel !== undefined) atualizar();
-  });
+  };
   atualizar();
 
   $('#btLimConfirmar').onclick = async () => {
@@ -4667,8 +4667,8 @@ function escolherQualExcluir(g){
     <div class="modal-pe"><button class="btn" id="btDupVoltar">Voltar</button>
       <button class="btn danger" id="btDupExcluir" disabled>Excluir marcados</button></div>`, true);
   const atualiza = () => {
+    const bt = $('#btDupExcluir'); if (!bt) return;
     const n = $$('#cfModal [data-dupx]:checked').length, total = g.lista.length;
-    const bt = $('#btDupExcluir');
     bt.disabled = !n || n === total;
     bt.textContent = n === total ? 'Deixe ao menos um' : n ? `Excluir ${n} marcado${n === 1 ? '' : 's'}` : 'Excluir marcados';
   };
@@ -8533,6 +8533,8 @@ function abrirModal(html, larga){
   }
   f.querySelector('.cf-modal').innerHTML = html;
   f.querySelector('.cf-modal').classList.toggle('larga', !!larga);
+  // a janela é a mesma para todas as telas: o que a anterior ligou não pode vazar
+  f.onclick = null; f.onchange = null; f.oninput = null;
   f.classList.add('on');
 }
 function fecharModal(){ const f = $('#cfModal'); if (f) f.classList.remove('on'); }
