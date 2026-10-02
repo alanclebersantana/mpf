@@ -685,6 +685,30 @@ html[data-tema="escuro"] .tela-lim{background:rgba(242,194,48,.2);color:#E8C765}
 .cf-chip button{color:var(--accent-2);opacity:.6;font-size:13px;padding:0 2px}
 .cf-chip button:hover{opacity:1}
 .cf-vazio{color:var(--muted-2);font-size:12.5px}
+.dup-aviso{display:flex;align-items:center;gap:10px;padding:8px 14px;margin:0 16px 8px;
+  background:var(--warn-dim);border:1px solid #EEDCB4;border-radius:10px;font-size:13px;color:#6E4E10}
+.dup-aviso .dup-ico{font-size:16px}
+.dup-aviso .btn{margin-left:auto}
+.grid tbody tr.dup td{background:rgba(242,194,48,.14)}
+.grid tbody tr.dup:hover td{background:rgba(242,194,48,.26)}
+.grid tbody tr.dup td:first-child{box-shadow:inset 3px 0 0 #D9A400}
+.dup-lista{display:grid;gap:12px;max-height:60vh;overflow:auto;padding-right:4px}
+.dup-g{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface-2)}
+.dup-g.forte{border-color:#E7C76A;background:rgba(242,194,48,.08)}
+.dup-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.dup-mot{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--warn);
+  background:var(--warn-dim);padding:2px 9px;border-radius:999px}
+.dup-n{font-size:12.5px;color:var(--muted)}
+.dup-l,.dup-op{display:grid;grid-template-columns:86px 1fr 92px 120px;gap:10px;align-items:center;
+  padding:8px 6px;border-top:1px solid var(--line-soft);font-size:13px}
+.dup-op{grid-template-columns:24px 86px 1fr 92px 120px;cursor:pointer;border-radius:8px}
+.dup-op:hover{background:var(--hover)}
+.dup-op input{width:16px;height:16px}
+.dup-dt{color:var(--muted);font-size:12.5px}
+.dup-quem small{display:block;color:var(--muted-2);font-size:11px}
+.dup-v{text-align:right}
+.dup-acoes{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}
+.dup-esc{display:grid;gap:4px}
 .rb-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;align-items:end}
 #rbGrid td{padding:0;border-bottom:1px solid var(--line-soft);vertical-align:middle}
 #rbGrid .cell{min-height:38px}
@@ -1604,6 +1628,7 @@ try { document.documentElement.dataset.tema =
         <button class="btn sm ghost" id="fClear" title="Volta ao padrão: só os pendentes">Limpar filtros</button>
       </div>
       <div class="chips-active" id="fChips"></div>
+      <div class="dup-aviso hide" id="dupAviso"></div>
       <div class="bulkbar hide" id="bulkbar">
         <span id="bulkCount">0 selecionados</span>
         <button class="btn sm" data-bulk="status">Alterar status</button>
@@ -2525,7 +2550,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "01/10/2026 17:36";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "02/10/2026 09:09";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -3051,10 +3076,12 @@ async function aplicar(ops, origem, label, semHistorico, alvo, semBackup){
   const inversas = [], mudancas = [], resumo = [];
   let criados = 0;
   const baseCodigo = alvo === 'lanc' ? proximoCodigo() : 0;   // fixado antes do lote, para não pular número
+  const idsNovos = [];
   for (const op of ops){
     if (op.acao === 'criar'){
       if (alvo === 'lanc' && !(op.dados || {}).codigo) op.dados = {...(op.dados || {}), codigo: formataCodigo(baseCodigo + criados++)};
       const r = E.norm(op.dados || {});
+      idsNovos.push(r.id);
       E.set([...E.get(), r]); mudancas.push({tipo:'set', id:r.id, dados:semId(r)});
       inversas.push({acao:'excluir', id:r.id});
       resumo.push(`criou ${nomeDe(r)} · ${brl(r.valor)} em ${fmtDate(r.dataPagamento || r.dataPrevista)}`);
@@ -3091,6 +3118,11 @@ async function aplicar(ops, origem, label, semHistorico, alvo, semBackup){
     $('#btnUndo').textContent = 'Desfazer: ' + label; }
   await Repo.registrar({ts: Date.now(), uid: APP.uid || 'local', nome: APP.nome || 'Local', origem, label,
     tela: alvo || 'lanc', resumo: resumo.slice(0,12), total: resumo.length});
+  // um lançamento novo que coincide com outro: pergunta na hora, não só avisa
+  if ((alvo || 'lanc') === 'lanc' && idsNovos.length && origem !== 'desfazer' && typeof duplicidades === 'function'){
+    const novas = duplicidades().filter(g => g.ids.some(id => idsNovos.includes(id)));
+    if (novas.length) setTimeout(() => abrirDuplicidades(novas), 250);
+  }
   return true;
 }
 const semId = r => { const o = {...r}; delete o.id; return o; };
@@ -3244,8 +3276,62 @@ function renderDash(){
 }
 
 /* ---------- tabela ---------- */
+/* ---------- possíveis duplicidades ----------
+   Mesmo valor para a mesma pessoa — bastando o primeiro nome — ou para a
+   mesma chave Pix. O que você disser que não é duplicidade fica guardado
+   e não é perguntado de novo. */
+const chavePix = r => {
+  const p = String(r.pix || '').trim().toLowerCase();
+  if (!p) return '';
+  const dig = soDigitos(p);
+  return (dig.length >= 10 && dig.length === p.replace(/[.\-\/\s()+]/g, '').length) ? dig : p;
+};
+const primeiroNome = r => (semAcento(r.contribuinte || '').split(/\s+/).filter(Boolean)[0] || '');
+const nomeInteiro = r => semAcento(r.contribuinte || '').replace(/\s+/g, ' ').trim();
+
+function dupIgnoradas(){ try { return JSON.parse(Local.get('tesouraria:dupIgnoradas') || '[]'); } catch(e){ return []; } }
+const dupChave = ids => ids.slice().sort().join('|');
+
+/** grupos de lançamentos que parecem a mesma coisa */
+function duplicidades(){
+  const vivos = S.rows.filter(r => toCents(r.valor) > 0 && r.status !== 'Cancelado');
+  const grupos = new Map();
+  const poe = (k, r) => { if (!grupos.has(k)) grupos.set(k, new Set()); grupos.get(k).add(r); };
+  vivos.forEach(r => {
+    const v = toCents(r.valor);
+    const pix = chavePix(r), nome = primeiroNome(r);
+    if (pix) poe('pix|' + v + '|' + pix, r);
+    if (nome && nome.length >= 3) poe('nome|' + v + '|' + nome, r);
+  });
+  const ignoradas = new Set(dupIgnoradas());
+  const vistos = new Set(), saida = [];
+  for (const [k, set] of grupos){
+    if (set.size < 2) continue;
+    const lista = [...set].sort((a,b) => String(a.dataPagamento).localeCompare(String(b.dataPagamento)));
+    const ids = lista.map(r => r.id);
+    const chave = dupChave(ids);
+    if (vistos.has(chave) || ignoradas.has(chave)) continue;
+    vistos.add(chave);
+    const [tipo] = k.split('|');
+    // nome inteiro igual pesa mais do que só o primeiro nome
+    const forte = tipo === 'pix' || lista.every(r => nomeInteiro(r) === nomeInteiro(lista[0]));
+    saida.push({ids, lista, motivo: tipo === 'pix' ? 'mesma chave Pix' : (forte ? 'mesmo nome' : 'mesmo primeiro nome'), forte});
+  }
+  return saida.sort((a,b) => (b.forte - a.forte) || (toCents(b.lista[0].valor) - toCents(a.lista[0].valor)));
+}
+
 function renderTable(){
   const rows = filtered();
+  const dups = duplicidades();
+  const emDup = new Set(dups.flatMap(g => g.ids));
+  const aviso = $('#dupAviso');
+  if (aviso){
+    aviso.classList.toggle('hide', !dups.length);
+    if (dups.length) aviso.innerHTML = `<span class="dup-ico">⚠</span>
+      <b>${dups.length === 1 ? '1 possível duplicidade' : dups.length + ' possíveis duplicidades'}</b>
+      <span>mesmo valor para a mesma pessoa ou a mesma chave Pix</span>
+      <button class="btn sm primary" id="btDupVer">Verificar</button>`;
+  }
   $('#thead').innerHTML = '<th class="cbx"><input type="checkbox" id="chkAll"></th>' +
     COLS.map(c => `<th data-k="${c.k}" class="${c.al||''}" style="width:${c.w}" title="${c.t}">${c.t}<span class="ar"> ${S.sort.k===c.k ? (S.sort.dir>0?'▲':'▼') : ''}</span></th>`).join('') +
     '<th class="rowmenu"></th>';
@@ -3253,7 +3339,7 @@ function renderTable(){
   $('#tbody').innerHTML = rows.map(r => {
     const iss = rowIssues(r);
     const quem = r.porQuem ? `alterado por ${r.porQuem}${r.em ? ' em ' + hora(r.em) : ''}` : '';
-    return `<tr data-id="${r.id}" class="${S.sel.has(r.id)?'sel':''}" title="${esc(quem)}">
+    return `<tr data-id="${r.id}" class="${S.sel.has(r.id)?'sel':''} ${emDup.has(r.id)?'dup':''}" title="${esc(quem)}${emDup.has(r.id) ? ' · possível duplicidade' : ''}">
       <td class="cbx"><input type="checkbox" data-sel="${r.id}" ${S.sel.has(r.id)?'checked':''}></td>` +
       COLS.map(c => {
         const v = r[c.k], al = c.al ? ' ' + c.al : '';
@@ -4425,6 +4511,81 @@ window.MPF_incluirLiminares = function(dados){
     go('lanc');
   };
 };
+
+/* ---------- conferir as duplicidades ---------- */
+function abrirDuplicidades(apenas){
+  const dups = Array.isArray(apenas) ? apenas : duplicidades();
+  if (!dups.length) return toast('Nenhuma duplicidade encontrada.');
+  const linha = r => `<div class="dup-l">
+      <span class="dup-dt">${fmtDate(r.dataPagamento) || '—'}</span>
+      <span class="dup-quem"><b>${esc(r.contribuinte)}</b>
+        <small>${esc(r.operacao || '')}${r.pix ? ' · ' + esc(r.pix) : ''}${r.codigo ? ' · ' + esc(r.codigo) : ''}</small></span>
+      <span class="st st-${esc(r.status)}">${esc(r.status)}</span>
+      <b class="dup-v">${brl(r.valor)}</b></div>`;
+  abrirModal(`<h3>Possíveis duplicidades</h3>
+    <p class="sub">${Array.isArray(apenas) ? 'O lançamento que você acabou de criar coincide com outro já existente.'
+      : 'Lançamentos com o mesmo valor para a mesma pessoa ou a mesma chave Pix.'} Diga, grupo a grupo, se é duplicidade.</p>
+    <div class="dup-lista">${dups.map((g, i) => `<div class="dup-g ${g.forte ? 'forte' : ''}" data-dupg="${i}">
+      <div class="dup-cab"><span class="dup-mot">${g.motivo}</span>
+        <span class="dup-n">${g.lista.length} lançamentos de ${brl(g.lista[0].valor)}</span></div>
+      ${g.lista.map(linha).join('')}
+      <div class="dup-acoes">
+        <button class="btn sm" data-dupnao="${i}">Não é duplicidade</button>
+        <button class="btn sm primary" data-dupsim="${i}">É duplicidade — escolher qual excluir</button>
+      </div></div>`).join('')}</div>
+    <div class="modal-pe"><button class="btn" data-fecharmodal>Fechar</button></div>`);
+
+  $('#cfModal').onclick = async e => {
+    const nao = e.target.closest('[data-dupnao]');
+    if (nao){
+      const g = dups[+nao.dataset.dupnao];
+      const lista = dupIgnoradas(); lista.push(dupChave(g.ids));
+      Local.set('tesouraria:dupIgnoradas', JSON.stringify(lista));
+      $(`[data-dupg="${nao.dataset.dupnao}"]`).remove();
+      renderTable();
+      if (!$('#cfModal .dup-g')) fecharModal();
+      return;
+    }
+    const sim = e.target.closest('[data-dupsim]');
+    if (sim) escolherQualExcluir(dups[+sim.dataset.dupsim]);
+  };
+}
+
+function escolherQualExcluir(g){
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  abrirModal(`<h3>Qual excluir?</h3>
+    <p class="sub">Marque o que deve sair. O que ficar desmarcado continua como está.</p>
+    <div class="dup-esc">${g.lista.map(r => `<label class="dup-op">
+      <input type="checkbox" data-dupx="${r.id}" ${r.status === 'Pago' ? '' : ''}>
+      <span class="dup-dt">${fmtDate(r.dataPagamento) || '—'}</span>
+      <span class="dup-quem"><b>${esc(r.contribuinte)}</b>
+        <small>${esc(r.operacao || '')}${r.pix ? ' · ' + esc(r.pix) : ''}${r.codigo ? ' · ' + esc(r.codigo) : ''}
+          ${r.criadoEm ? ' · lançado ' + fmtDate(String(r.criadoEm).slice(0,10)) : ''}</small></span>
+      <span class="st st-${esc(r.status)}">${esc(r.status)}</span>
+      <b class="dup-v">${brl(r.valor)}</b></label>`).join('')}</div>
+    <div class="modal-pe"><button class="btn" id="btDupVoltar">Voltar</button>
+      <button class="btn danger" id="btDupExcluir" disabled>Excluir marcados</button></div>`);
+  const atualiza = () => {
+    const n = $$('#cfModal [data-dupx]:checked').length, total = g.lista.length;
+    const bt = $('#btDupExcluir');
+    bt.disabled = !n || n === total;
+    bt.textContent = n === total ? 'Deixe ao menos um' : n ? `Excluir ${n} marcado${n === 1 ? '' : 's'}` : 'Excluir marcados';
+  };
+  $('#cfModal').onchange = atualiza;
+  $('#btDupVoltar').onclick = () => abrirDuplicidades();
+  $('#btDupExcluir').onclick = async () => {
+    const ids = $$('#cfModal [data-dupx]:checked').map(el => el.dataset.dupx);
+    if (!ids.length || ids.length === g.lista.length) return;
+    fecharModal();
+    await aplicar(ids.map(id => ({acao:'excluir', id})), 'manual', 'exclusão de duplicidade');
+    toast(`${ids.length} lançamento${ids.length === 1 ? '' : 's'} excluído${ids.length === 1 ? '' : 's'}.`);
+    if (duplicidades().length) abrirDuplicidades();
+  };
+}
+$('#view-lanc').addEventListener('click', e => { if (e.target.closest('#btDupVer')) abrirDuplicidades(); });
+$('#tbody').addEventListener('dblclick', e => {
+  const tr = e.target.closest('tr.dup'); if (tr && !e.target.closest('.cell')) abrirDuplicidades();
+});
 
 /* ---------- reembolsos ---------- */
 function abrirNovoReembolso(){
