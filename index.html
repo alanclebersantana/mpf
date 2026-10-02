@@ -692,16 +692,16 @@ html[data-tema="escuro"] .tela-lim{background:rgba(242,194,48,.2);color:#E8C765}
 .grid tbody tr.dup td{background:rgba(242,194,48,.14)}
 .grid tbody tr.dup:hover td{background:rgba(242,194,48,.26)}
 .grid tbody tr.dup td:first-child{box-shadow:inset 3px 0 0 #D9A400}
-.dup-lista{display:grid;gap:12px;max-height:60vh;overflow:auto;padding-right:4px}
+.dup-lista{display:grid;gap:12px}
 .dup-g{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface-2)}
 .dup-g.forte{border-color:#E7C76A;background:rgba(242,194,48,.08)}
 .dup-cab{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .dup-mot{font-size:10.5px;font-weight:800;text-transform:uppercase;letter-spacing:.3px;color:var(--warn);
   background:var(--warn-dim);padding:2px 9px;border-radius:999px}
 .dup-n{font-size:12.5px;color:var(--muted)}
-.dup-l,.dup-op{display:grid;grid-template-columns:86px 1fr 92px 120px;gap:10px;align-items:center;
+.dup-l,.dup-op{display:grid;grid-template-columns:96px minmax(0,1fr) 100px 130px;gap:12px;align-items:center;
   padding:8px 6px;border-top:1px solid var(--line-soft);font-size:13px}
-.dup-op{grid-template-columns:24px 86px 1fr 92px 120px;cursor:pointer;border-radius:8px}
+.dup-op{grid-template-columns:24px 96px minmax(0,1fr) 100px 130px;cursor:pointer;border-radius:8px}
 .dup-op:hover{background:var(--hover)}
 .dup-op input{width:16px;height:16px}
 .dup-dt{color:var(--muted);font-size:12.5px}
@@ -778,6 +778,7 @@ html[data-tema="escuro"] .op-chip.q-vdp{background:rgba(124,92,186,.24);color:#C
 .cf-fundo{position:fixed;inset:0;background:rgba(10,16,26,.55);display:none;align-items:center;justify-content:center;padding:22px;z-index:70}
 .cf-fundo.on{display:flex}
 .cf-modal{background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:86vh;overflow:auto}
+.cf-modal.larga{max-width:min(960px, 94vw)}
 .cf-modal h3{font-size:16.5px;font-weight:800;margin-bottom:6px}
 .cf-modal .sub{font-size:13px;color:var(--muted);margin-bottom:14px}
 .cf-ops{margin-bottom:14px}
@@ -2550,7 +2551,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "02/10/2026 09:09";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "02/10/2026 09:25";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -4462,7 +4463,7 @@ window.MPF_incluirLiminares = function(dados){
       Quem ficar sem chave entra assim mesmo, e aparece no alerta de chave faltando.</div>
     <div class="modal-pe"><span id="limResumo" style="margin-right:auto;font-size:13px;color:var(--muted)"></span>
       <button class="btn" data-fecharmodal>Cancelar</button>
-      <button class="btn primary" id="btLimConfirmar">Incluir em Pagamentos</button></div>`);
+      <button class="btn primary" id="btLimConfirmar">Incluir em Pagamentos</button></div>`, true);
 
   /* o rodapé e o botão acompanham o que está marcado */
   const marcados = () => $$('#cfModal [data-limsel]:checked').map(el => el.dataset.limsel);
@@ -4533,7 +4534,7 @@ function abrirDuplicidades(apenas){
         <button class="btn sm" data-dupnao="${i}">Não é duplicidade</button>
         <button class="btn sm primary" data-dupsim="${i}">É duplicidade — escolher qual excluir</button>
       </div></div>`).join('')}</div>
-    <div class="modal-pe"><button class="btn" data-fecharmodal>Fechar</button></div>`);
+    <div class="modal-pe"><button class="btn" data-fecharmodal>Fechar</button></div>`, true);
 
   $('#cfModal').onclick = async e => {
     const nao = e.target.closest('[data-dupnao]');
@@ -4564,7 +4565,7 @@ function escolherQualExcluir(g){
       <span class="st st-${esc(r.status)}">${esc(r.status)}</span>
       <b class="dup-v">${brl(r.valor)}</b></label>`).join('')}</div>
     <div class="modal-pe"><button class="btn" id="btDupVoltar">Voltar</button>
-      <button class="btn danger" id="btDupExcluir" disabled>Excluir marcados</button></div>`);
+      <button class="btn danger" id="btDupExcluir" disabled>Excluir marcados</button></div>`, true);
   const atualiza = () => {
     const n = $$('#cfModal [data-dupx]:checked').length, total = g.lista.length;
     const bt = $('#btDupExcluir');
@@ -8420,7 +8421,7 @@ function abrirConferencia(id){
 }
 
 /** uma janela simples, reaproveitada pela conferência */
-function abrirModal(html){
+function abrirModal(html, larga){
   let f = $('#cfModal');
   if (!f){
     f = document.createElement('div');
@@ -8430,6 +8431,7 @@ function abrirModal(html){
     f.addEventListener('click', e => { if (e.target === f) fecharModal(); });
   }
   f.querySelector('.cf-modal').innerHTML = html;
+  f.querySelector('.cf-modal').classList.toggle('larga', !!larga);
   f.classList.add('on');
 }
 function fecharModal(){ const f = $('#cfModal'); if (f) f.classList.remove('on'); }
