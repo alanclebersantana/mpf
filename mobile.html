@@ -143,6 +143,15 @@ main{padding:12px 12px calc(84px + env(safe-area-inset-bottom));min-height:60vh}
 
 .dia .e b{color:var(--ok)} .dia .s b{color:var(--accent-2)}
 .dia .saldo b.neg{color:var(--bad)} .dia .saldo b.pos{color:var(--ok)}
+.sb-big{font-size:24px;font-weight:800;color:var(--ok)}
+.sb-sub{font-size:11.5px;color:var(--muted-2);display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:2px}
+.sb-velho{background:var(--warn-dim);color:var(--warn);padding:1px 8px;border-radius:999px;font-weight:800;font-size:10.5px}
+.sb-lista{margin-top:8px;border-top:1px solid var(--line-soft)}
+.sb-l{width:100%;text-align:left;color:var(--text)}
+.sb-l .esq span.velho{color:var(--warn);font-weight:700}
+.sb-add{display:block;width:100%;padding:11px;margin-top:4px;border-radius:10px;background:var(--accent-dim);color:var(--accent-2);font-weight:800;font-size:13px}
+.mini.banco{border-left:3px solid var(--ok)}
+.bt.perigo{width:100%;height:42px;border-radius:10px;background:var(--bad-dim);color:var(--bad);font-weight:800}
 .sel-mes{margin-bottom:10px}
 .sel-mes select{width:100%;height:42px;padding:0 12px;border:1px solid var(--line);border-radius:10px;
   background:var(--surface);font:inherit;font-size:15px;font-weight:700;color:var(--text)}
@@ -460,6 +469,7 @@ html[data-tema="escuro"] .q-vdp{background:rgba(124,92,186,.24);color:#C4AEEC}
       <div class="nota">Recebíveis líquidos de obrigações mais estoque disponível.<br><b id="bPatrimonio"></b></div>
       <div class="bloco">
         <div class="tit">Posição contratual</div>
+        <div class="pl hide" id="bBancoLin"><span>Saldo bancário<i class="sub-pl" id="bBancoSub"></i></span><b class="e" id="bBancoVal">—</b></div>
         <div class="pl"><span>Recebimentos previstos</span><b class="e" id="bEnt">—</b></div>
         <div class="pl"><span>Pagamentos previstos</span><b class="s" id="bSai">—</b></div>
         <div class="pl hide" id="bLimLin"><span>Liminares a pagar<i class="sub-pl" id="bLimSub"></i></span>
@@ -472,6 +482,7 @@ html[data-tema="escuro"] .q-vdp{background:rgba(124,92,186,.24);color:#C4AEEC}
         <div class="chip"><div class="r">Milhas bloqueadas</div><div class="v bq" id="bMilhasBq">—</div></div>
       </div>
     </div>
+    <div class="card" id="sbCard"></div>
     <div class="card"><div class="ch"><h2>A receber por pagador <span class="un">· valores em milhões</span></h2>
       <button class="bt-abrir" id="abrirRecTab">Ver tabela completa</button></div>
       <div id="bReceberTab"></div></div>
@@ -486,6 +497,12 @@ html[data-tema="escuro"] .q-vdp{background:rgba(124,92,186,.24);color:#C4AEEC}
   <section class="tela" id="tela-mes">
     <div class="topo-fixo" id="mTopoFixo">
       <div class="chips" id="mesChips"></div>
+      <div class="duplo hide" id="mBancoDuplo">
+        <div class="mini banco" data-irbanco="1"><div class="rot">Saldo bancário</div><div class="val pos" id="mBanco">—</div>
+          <div class="mini-det" id="mBancoDet">início do dia</div></div>
+        <div class="mini"><div class="rot">Com o saldo bancário</div><div class="val" id="mComBanco">—</div>
+          <div class="mini-det">fluxo líquido + saldo</div></div>
+      </div>
       <div class="duplo">
         <div class="mini"><div class="rot">Recebimentos do mês</div><div class="val pos" id="mEnt">—</div>
           <div class="mini-det" id="mEntDet"></div></div>
@@ -622,7 +639,7 @@ const FIREBASE = {
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
 const ADMINS = ["alanclebersantana@gmail.com"];
-const VERSAO = "01/10/2026 17:36";
+const VERSAO = "02/10/2026 11:08";
 
 const STATUS = ['Pendente','Agendado','Pago','Reinvestido','Cancelado'];
 const STATUS_REC = ['Previsto','Recebido','Atrasado','Cancelado'];
@@ -630,7 +647,7 @@ const STATUS_ADI = ['Aguardando','Pago','Cancelado'];
 const MESES = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 
 const S = {rows:[], rec:[], adi:[], log:[], estoque:{itens:[]}, saldo:{valor:0, mesRef:''},
-  reembolsos:[], rbMesSel:'', rbAberto:'', limParceiros:[], limContas:[], limLanc:[], limPagos:[], limAba:'fech', limMes:'',
+  reembolsos:[], rbMesSel:'', rbAberto:'', contas:[], contasAberto:false, limParceiros:[], limContas:[], limLanc:[], limPagos:[], limAba:'fech', limMes:'',
   tela:'bal', mesSel:'', limite:{lanc:40, rec:40, adi:40},
   sel:new Set(), selTipo:'', selModo:false, bqAberto:'', mesJaAberto:false, vendas:[], vendaAberta:'', vendaEdit:'', ciaAberta:'', limiteDias:7, prejuizos:[], prejAberto:'',
   f:{lanc:{q:'', st:'Pendente', op:'', d1:'', d2:'', v1:'', v2:''},
@@ -747,6 +764,7 @@ function escutar(){
   liga('vendas', d => S.vendas = d.map(normVenda));
   liga('prejuizos', d => S.prejuizos = d.map(normPrej));
   liga('reembolsos', d => S.reembolsos = d.map(normReemb));
+  liga('contas_bancarias', d => S.contas = d.map(normConta).sort((a,b) => a.nome.localeCompare(b.nome)));
   // o controle de liminares: só o que o fechamento do mês precisa
   liga('lim_parceiros', d => S.limParceiros = d);
   liga('lim_contas', d => S.limContas = d);
@@ -787,7 +805,11 @@ const Calc = {
   entradasFuturas(){ return soma(S.rec.filter(ABERTO_REC)); },
   prejuizos(){ return totalPrej(); },
   saidasFuturas(){ return soma(S.rows.filter(ABERTO)); },
-  saude(){ return real(cent(this.entradasFuturas()) - cent(this.saidasFuturas()) - cent(totalPrej())); },
+  saude(){
+    const lim = (typeof limAPagar === 'function' && limAPagar()) || {total:0};
+    return real(cent(this.entradasFuturas()) - cent(this.saidasFuturas()) - cent(totalPrej())
+      - cent(lim.total) + cent(saldoBancario()));
+  },
   aReceberEm(d){ return soma(S.rec.filter(r => ABERTO_REC(r) && r.dataPrevista === d)); },
   aPagarEm(d){ return soma(S.rows.filter(r => r.dataPagamento === d && ABERTO(r))); },
   dias(n){
@@ -1074,6 +1096,21 @@ function caixaObsCel(titulo, texto, aoSalvar){
 }
 
 /* ---------- prejuízos ---------- */
+function normConta(o){
+  return {id:o.id, nome:String(o.nome ?? '').trim() || 'Conta', saldo: real(cent(o.saldo)),
+    em:Number(o.em) || 0, porQuem:String(o.porQuem ?? '')};
+}
+const saldoBancario = () => real(S.contas.reduce((s,c) => s + cent(c.saldo), 0));
+function diasUteisDesde(ts){
+  if (!ts) return 99;
+  let d = new Date(ts); d.setHours(0,0,0,0);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  let n = 0;
+  while (d < hoje){ d.setDate(d.getDate() + 1); if (d.getDay() !== 0 && d.getDay() !== 6) n++; }
+  return n;
+}
+const quandoAtualizou = ts => ts ? new Date(ts).toLocaleString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'}).replace(',', '') : 'nunca';
+
 function normReemb(o){
   return {id:o.id, quem:String(o.quem ?? '').trim() || '(sem recebedor)',
     data: parseDate(o.data) || hojeSP(), valor: real(cent(o.valor)),
@@ -1169,6 +1206,54 @@ function ciasBloqCel(){
 }
 
 /* ===================== REEMBOLSOS ===================== */
+/* ===================== SALDO BANCÁRIO ===================== */
+function pintarSaldoBancario(){
+  const el = $('#sbCard'); if (!el) return;
+  const velhas = S.contas.filter(c => diasUteisDesde(c.em) > 1);
+  const aberto = S.contasAberto || !S.contas.length;
+  const maisNova = Math.max(0, ...S.contas.map(c => c.em));
+  el.innerHTML = `<div class="ch"><h2>Saldo bancário — início do dia</h2>
+      ${S.contas.length ? `<button class="bt-abrir" data-sbtoggle="1">${aberto ? 'Ocultar ▲' : 'Ver contas ▼'}</button>` : ''}</div>
+    <div class="sb-big">${brl(saldoBancario())}</div>
+    <div class="sb-sub">${S.contas.length ? `${S.contas.length} conta(s) · atualizado ${quandoAtualizou(maisNova)}` : 'Nenhuma conta cadastrada.'}
+      ${velhas.map(c => `<span class="sb-velho">${esc(c.nome)} sem atualizar há ${diasUteisDesde(c.em)} dia(s)</span>`).join('')}</div>
+    ${!aberto ? '' : `<div class="sb-lista">
+      ${S.contas.map(c => `<button class="linha sb-l" data-sbconta="${c.id}">
+        <div class="esq"><b>${esc(c.nome)}</b><span class="${diasUteisDesde(c.em) > 1 ? 'velho' : ''}">atualizado ${quandoAtualizou(c.em)}</span></div>
+        <div class="dir e">${brl(c.saldo)}</div></button>`).join('')}
+      ${podeEditar() ? '<button class="sb-add" data-sbnova="1">+ Nova conta</button>' : ''}
+    </div>`}`;
+}
+
+function abrirConta(id){
+  const c = id ? S.contas.find(x => x.id === id) : null;
+  if (!podeEditar()) return recado('Seu acesso é somente leitura');
+  abrirFolha(`<h3>${c ? esc(c.nome) : 'Nova conta'}</h3>
+    <div class="sub">${c ? 'atualizado ' + quandoAtualizou(c.em) : 'O saldo é o do início do dia.'} · a data entra sozinha ao salvar</div>
+    <div class="campo"><label for="sbNome">Nome da conta</label><input id="sbNome" value="${c ? esc(c.nome) : ''}" placeholder="Itaú · MP"></div>
+    <div class="campo"><label for="sbSaldo">Saldo — início do dia</label>
+      <input id="sbSaldo" inputmode="decimal" value="${c ? c.saldo.toFixed(2).replace('.', ',') : ''}" placeholder="0,00"></div>
+    <div class="acoes duas"><button class="bt forte" data-sbsalvar="${c ? c.id : ''}">Salvar</button>
+      <button class="bt leve" data-fechar="1">Cancelar</button></div>
+    ${c ? `<button class="bt perigo" data-sbapagar="${c.id}" style="margin-top:8px">Tirar esta conta</button>` : ''}`);
+  setTimeout(() => $(c ? '#sbSaldo' : '#sbNome').focus(), 80);
+}
+
+async function salvarConta(id){
+  const nome = ($('#sbNome') || {}).value.trim(), saldo = parseNum(($('#sbSaldo') || {}).value);
+  if (!nome) return recado('Dê um nome à conta');
+  fechar();
+  const dado = {nome, saldo, em:Date.now(), porQuem:APP.nome};
+  try {
+    if (id) await fdb.collection('contas_bancarias').doc(id).set(dado);
+    else await fdb.collection('contas_bancarias').add(dado);
+    await fdb.collection('auditoria').add({ts:Date.now(), uid:APP.uid, nome:APP.nome, origem:'celular',
+      label: id ? 'saldo bancário atualizado' : 'conta bancária criada', tela:'bal', resumo:[`${nome} · ${brl(saldo)}`], total:1});
+    S.contasAberto = true;
+    recado('Saldo salvo');
+  } catch(e){ recado('Não consegui gravar: ' + (e.code || e.message)); }
+}
+
 function pintarReembolsos(){
   if (!$('#rbGrupos')) return;
   const meses = [...new Set(S.reembolsos.map(r => r.data.slice(0,7)))].sort().reverse();
@@ -1587,6 +1672,13 @@ function pintarBalanco(){
   $('#bMilhasBq').textContent = brl(est.bloqueados);
   const tp = totalPrej();
   $('#bPrejLin').classList.toggle('hide', !cent(tp));
+  // o saldo que já está nas contas
+  $('#bBancoLin').classList.toggle('hide', !S.contas.length);
+  if (S.contas.length){
+    $('#bBancoVal').textContent = brl(saldoBancario());
+    $('#bBancoSub').textContent = `${S.contas.length} conta(s) · início do dia`;
+  }
+  pintarSaldoBancario();
   // o que o controle de liminares deve aos parceiros, ainda fora do contas a pagar
   const lim = limAPagar();
   $('#bLimLin').classList.toggle('hide', !lim);
@@ -1828,6 +1920,15 @@ function pintarMes(){
     ${rbTotal ? `<span class="reemb">inclui ${curto(rbTotal)} de reembolsos</span>` : ''}`;
   $('#mRes').textContent = brl(dado.resultado);
   $('#mRes').style.color = dado.resultado < 0 ? '#FF9F97' : '#fff';
+  // o saldo que já está na conta, ao lado — sem entrar no fluxo do mês
+  $('#mBancoDuplo').classList.toggle('hide', !S.contas.length);
+  if (S.contas.length){
+    const sb = saldoBancario(), com = real(cent(dado.resultado) + cent(sb));
+    $('#mBanco').textContent = curto(sb);
+    $('#mBancoDet').textContent = `${S.contas.length} conta(s) · início do dia`;
+    $('#mComBanco').textContent = curto(com);
+    $('#mComBanco').style.color = com < 0 ? 'var(--bad)' : 'var(--ok)';
+  }
   $('#mNota').textContent = `${mesNome(S.mesSel)} · ${dado.ent.length} entrada(s) e ${dado.sai.length} saída(s)`;
 
   const porDia = {};
@@ -2251,6 +2352,20 @@ document.addEventListener('click', async e => {
 
   if (e.target.closest('#abrirRecTab')) return abrirTabelaReceber();
 
+  if (e.target.closest('[data-sbtoggle]')){ S.contasAberto = !S.contasAberto; return pintarSaldoBancario(); }
+  if (e.target.closest('[data-sbnova]')) return abrirConta('');
+  const sbc = e.target.closest('[data-sbconta]'); if (sbc) return abrirConta(sbc.dataset.sbconta);
+  const sbs = e.target.closest('[data-sbsalvar]'); if (sbs) return salvarConta(sbs.dataset.sbsalvar);
+  const sba = e.target.closest('[data-sbapagar]');
+  if (sba){
+    const c = S.contas.find(x => x.id === sba.dataset.sbapagar);
+    if (c && confirm(`Tirar a conta ${c.nome} do saldo bancário?`)){
+      fechar();
+      fdb.collection('contas_bancarias').doc(c.id).delete().then(() => recado('Conta removida')).catch(err => recado('Não consegui: ' + (err.code || err.message)));
+    }
+    return;
+  }
+  if (e.target.closest('[data-irbanco]')){ S.contasAberto = true; irPara('bal'); return; }
   const rbq = e.target.closest('[data-rbq]');
   if (rbq){ S.rbAberto = S.rbAberto === rbq.dataset.rbq ? '' : rbq.dataset.rbq; return pintarReembolsos(); }
   const laba = e.target.closest('[data-limaba]');
