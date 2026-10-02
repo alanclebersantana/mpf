@@ -1346,6 +1346,21 @@ html[data-tema="claro"] .comp-TAM{color:#A31F18} html[data-tema="claro"] .comp-L
   padding:5px 9px;font-size:11.5px;font-weight:800}#limApp .fx-ext2 table{width:100%;border-collapse:collapse;font-size:10.5px;table-layout:fixed}#limApp .fx-ext2 td{padding:2.5px 6px;border-bottom:1px solid #F0F3F6;vertical-align:top}#limApp .fx-ext2 tr:last-child td{border-bottom:0}#limApp .fx-ext2 .d{width:34px;color:#8A97A6}#limApp .fx-ext2 .m{width:56px;text-align:right;color:#4A5B6C;font-variant-numeric:tabular-nums;white-space:nowrap}#limApp .fx-ext2 .v{width:84px;text-align:right;color:#0F7A38;font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}#limApp .fx-ext2 .lim-op{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}#limApp .fx-ext-tot{display:flex;justify-content:space-between;border-top:2px solid #12304C;
   margin-top:2px;padding-top:5px;font-weight:800;font-size:12px}#limApp @media screen and (max-width:760px){#limApp .fx-lado{grid-template-columns:1fr}#limApp .fx-contas{columns:1}#limApp .fx-ext2{grid-template-columns:1fr} }#limApp[data-modo="mobile"] #report:not(.fx-export) .fx-lado{grid-template-columns:1fr}#limApp[data-modo="mobile"] #report:not(.fx-export) .fx-contas{columns:1}#limApp[data-modo="mobile"] #report:not(.fx-export) .fx-ext2{grid-template-columns:1fr}#limApp #report.fx-compacto .fx{padding:2px 2px 0}#limApp #report.fx-compacto .fx-rec-top{padding:10px 14px}#limApp #report.fx-compacto .fx-rec-corpo{padding:10px 14px 12px}#limApp #report.fx-compacto .fx-stats{margin:5px 0 0}#limApp #report.fx-compacto .fx-sec{margin-top:9px}#limApp #report.fx-compacto .fx-sec h4{margin-bottom:2px}#limApp #report.fx-compacto .fx-cia{padding:3px 0}#limApp #report.fx-compacto .fx-status{margin-top:8px;padding:5px 9px}#limApp #report.fx-compacto .fx-tab th, #limApp #report.fx-compacto .fx-tab td{padding:4px 6px}#limApp #report.fx-compacto .fx-leitura{margin-top:10px;line-height:1.45}#limApp #report.fx-compacto .fx-pe{margin-top:6px}
 
+#limApp .pend-ant{background:#FFF7E0;border:1px solid #EAD08A;border-left:4px solid #D9A400;border-radius:12px;padding:12px 14px;margin-bottom:12px}
+html[data-tema="escuro"] #limApp .pend-ant{background:rgba(242,194,48,.12);border-color:rgba(242,194,48,.35)}
+#limApp .pend-cab{display:flex;align-items:center;gap:12px}
+#limApp .pend-ico{font-size:20px;color:#B58600}
+#limApp .pend-txt{flex:1;min-width:0}
+#limApp .pend-txt b{display:block;font-size:14px}
+#limApp .pend-txt span{display:block;font-size:12px;color:var(--muted)}
+#limApp .pend-abrir{background:#D9A400;color:#2B2000;border:none;border-radius:999px;padding:6px 14px;font-weight:800;font-size:12px;cursor:pointer}
+#limApp .pend-mes{margin-top:10px;padding-top:10px;border-top:1px dashed #EAD08A}
+#limApp .pend-mes-cab{display:flex;align-items:center;gap:10px;font-weight:800;font-size:13px;margin-bottom:4px}
+#limApp .pend-mes-cab b{margin-left:auto}
+#limApp .pend-ir{background:none;border:none;color:var(--navy-txt);font-weight:800;font-size:12px;cursor:pointer;text-decoration:underline}
+#limApp .pend-l{display:grid;grid-template-columns:1fr auto 130px;gap:10px;padding:5px 0;font-size:13px;border-top:1px solid rgba(0,0,0,.05)}
+#limApp .pend-l small{color:var(--muted);font-size:11.5px}
+#limApp .pend-l b{text-align:right}
 #limApp .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;margin-bottom:12px}#limApp .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px;box-shadow:var(--shadow)}#limApp .kpi span{font-size:calc(10px * var(--escala));font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);display:block}#limApp .kpi b{display:block;font-size:calc(21px * var(--escala));font-weight:800;color:var(--navy-txt);margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}#limApp .kpi b.g{color:var(--green-dark)}#limApp .kpi b.r{color:#B4232A}#limApp .kpi em{display:block;font-style:normal;font-size:calc(11px * var(--escala));color:var(--muted);margin-top:4px}#limApp .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:calc(11px * var(--escala));font-weight:800;white-space:nowrap}#limApp .badge.ok{background:rgba(22,163,74,.14);color:var(--green-dark)}#limApp .badge.wait{background:rgba(224,168,46,.18);color:#9A6E00}#limApp .badge.open{background:var(--sutil);color:var(--navy-txt)}#limApp .subnav{display:flex;gap:6px;overflow-x:auto;margin-bottom:12px;padding-bottom:2px}#limApp .subnav button{
   flex:none;background:var(--card);border:1px solid var(--line);border-radius:999px;
   padding:8px 15px;font-size:calc(13px * var(--escala));font-weight:700;color:var(--muted);cursor:pointer;
@@ -1866,6 +1881,7 @@ try { document.documentElement.dataset.tema =
   <!-- ================= PAINEL ================= -->
   <section class="panel on" id="p-painel">
     <div id="lockPainel"></div>
+    <div id="limPendAnt" class="no-print"></div>
     <div class="kpis no-print" id="limKpis"></div>
 
     <div class="box no-print filtros">
@@ -2583,7 +2599,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "02/10/2026 11:44";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "02/10/2026 11:52";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -10947,7 +10963,46 @@ function renderReport(){
 /* =========================================================
    KPIs do painel
    ========================================================= */
+/** meses anteriores ao selecionado que ainda têm parceiro com saldo a pagar */
+function pendentesAnteriores(mk_){
+  const meses = [...new Set(S.lancamentos.map(l=>mesKey(l.data)))].filter(m => m && m < mk_).sort().reverse();
+  const saida = [];
+  meses.forEach(m => {
+    const d = agrupar(m, true);
+    const fila = d.responsaveis.filter(r => r.id && r.saldo > 0.005);
+    if (fila.length) saida.push({mes:m, total: fila.reduce((a,r)=>a+r.saldo,0), fila});
+  });
+  return saida;
+}
+
+function renderPendentesAnteriores(){
+  const box = el('limPendAnt'); if (!box) return;
+  if (parceiroLogado){ box.innerHTML = ''; return; }
+  const lista = pendentesAnteriores(mesAtual());
+  if (!lista.length){ box.innerHTML = ''; return; }
+  const total = lista.reduce((a,x)=>a+x.total,0);
+  const nParc = new Set(lista.flatMap(x => x.fila.map(r=>r.id))).size;
+  box.innerHTML = `<div class="pend-ant">
+    <div class="pend-cab">
+      <span class="pend-ico">⚠</span>
+      <div class="pend-txt">
+        <b>Ainda falta pagar ${money(total)} de ${lista.length === 1 ? mesLabel(lista[0].mes) : lista.length + ' meses anteriores'}</b>
+        <span>${nParc} parceiro${nParc===1?'':'s'} aguardando${lista.length > 1 ? ' · ' + lista.map(x=>mesLabel(x.mes).split(' ')[0]).join(', ') : ''}</span>
+      </div>
+      <button class="pend-abrir" data-pendver="1">${S.pendAberto ? 'Ocultar' : 'Ver quem'}</button>
+    </div>
+    ${!S.pendAberto ? '' : lista.map(x => `<div class="pend-mes">
+      <div class="pend-mes-cab"><span>${esc(mesLabel(x.mes))}</span><b>${money(x.total)}</b>
+        <button class="pend-ir" data-pendir="${x.mes}">abrir o mês →</button></div>
+      ${x.fila.map(r => `<div class="pend-l"><span>${esc(r.nome)}</span>
+        <small>${r.pago ? 'já recebeu ' + money(r.pago) + ' · ' : ''}${r.contas.length} conta(s)</small>
+        <b>${money(r.saldo)}</b></div>`).join('')}
+    </div>`).join('')}
+  </div>`;
+}
+
 function renderKpis(){
+  renderPendentesAnteriores();
   const mk_ = mesAtual(), d = agrupar(mk_);
   const pgs = S.pagamentos.filter(p=>p.mes===mk_ && (!parceiroLogado || p.respId===parceiroLogado));
   const pagos = pgs.reduce((a,p)=>a+(+p.valor||0),0);
@@ -13261,6 +13316,20 @@ window.__erroAcesso = function(e, etapa, email, uid){
       if (typeof renderAll === 'function') renderAll();   // os cards da visão geral acompanham
     } catch(e){ console.warn('liminares: não consegui atualizar', e); }
   }
+
+  /* ---------- o card do que falta do mês anterior ---------- */
+  RAIZ.addEventListener('click', e => {
+    const ver = e.target.closest('[data-pendver]');
+    if (ver){ S.pendAberto = !S.pendAberto; renderPendentesAnteriores(); return; }
+    const ir = e.target.closest('[data-pendir]');
+    if (ir){
+      el('mesRef').value = ir.dataset.pendir;
+      if (el('lancMes')) el('lancMes').value = ir.dataset.pendir;
+      S.pendAberto = false;
+      refreshAll();
+      irPara('fin');
+    }
+  });
 
   /* ---------- envio dos valores para Pagamentos ---------- */
   RAIZ.addEventListener('click', e => {
