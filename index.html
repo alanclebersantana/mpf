@@ -717,6 +717,29 @@ html[data-tema="escuro"] .tela-lim{background:rgba(242,194,48,.2);color:#E8C765}
   background:var(--warn-dim);border:1px solid #EEDCB4;border-radius:10px;font-size:13px;color:#6E4E10}
 .dup-aviso .dup-ico{font-size:16px}
 .dup-aviso .btn{margin-left:auto}
+.du-aviso{background:var(--bad-dim,rgba(217,58,47,.10));border-color:rgba(217,58,47,.35);color:var(--bad)}
+.grid .cell.nao-util{background:rgba(217,58,47,.12);box-shadow:inset 0 0 0 1px rgba(217,58,47,.45);border-radius:6px}
+.grid .cell.nao-util .txt{color:var(--bad);font-weight:800}
+.grid .cell.nao-util .txt::after{content:' ⛔';font-size:10px}
+.grid .cell.nao-util-ciente{background:var(--warn-dim);box-shadow:inset 0 0 0 1px rgba(217,164,0,.45);border-radius:6px}
+.grid .cell.nao-util-ciente .txt{color:var(--warn);font-weight:800}
+.grid .cell.nao-util-ciente .txt::after{content:' ✓';font-size:10px}
+.btn.du-ciente{border-color:rgba(217,164,0,.55);color:var(--warn)}
+.du-txt{margin:0 0 12px;font-size:13.5px;color:var(--muted);line-height:1.5}
+.du-txt b{color:var(--text)}
+.du-lista{display:grid;gap:6px;max-height:52vh;overflow:auto}
+.du-l{display:grid;grid-template-columns:minmax(0,1fr) 150px 18px 120px;gap:10px;align-items:center;
+  padding:8px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface-2);font-size:13px}
+.du-quem,.du-dt{display:flex;flex-direction:column;min-width:0}
+.du-quem b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.du-l small{font-size:11px;color:var(--muted-2)}
+.du-dt s{color:var(--bad);font-weight:700}
+.du-dt.ok b{color:var(--ok)}
+.du-seta{color:var(--muted-2);text-align:center}
+.du-mais{font-size:12px;color:var(--muted-2);padding:4px 11px}
+.du-dica{margin-top:6px;font-size:12px;color:var(--bad);display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.du-dica:empty{display:none}
+@media (max-width:640px){.du-l{grid-template-columns:1fr 1fr;}.du-seta{display:none}}
 .grid tbody tr.dup td{background:rgba(242,194,48,.14)}
 .grid tbody tr.dup:hover td{background:rgba(242,194,48,.26)}
 .grid tbody tr.dup td:first-child{box-shadow:inset 3px 0 0 #D9A400}
@@ -1676,6 +1699,7 @@ try { document.documentElement.dataset.tema =
       </div>
       <div class="chips-active" id="fChips"></div>
       <div class="dup-aviso hide" id="dupAviso"></div>
+      <div class="dup-aviso du-aviso hide" id="duAviso"></div>
       <div class="bulkbar hide" id="bulkbar">
         <span id="bulkCount">0 selecionados</span>
         <button class="btn sm" data-bulk="status">Alterar status</button>
@@ -2599,7 +2623,7 @@ const FIREBASE = {
   messagingSenderId: "586707241027",
   appId: "1:586707241027:web:7f5abed5a39e4596f9ecf6"
 };
-const VERSAO = "02/10/2026 13:31";   // carimbo desta build — aparece no rodapé do menu
+const VERSAO = "03/10/2026 06:21";   // carimbo desta build — aparece no rodapé do menu
 const PROXY_ASSISTENTE = "https://script.google.com/macros/s/AKfycbx1V4jCCe2CAh7hTEnaKCaY6K7lZV1BSs-ySDRFdGMCLPQMnCLwGEkN_20K2rFlG10L/exec";
 const ADMINS = ["alanclebersantana@gmail.com"]; // e-mails que entram como administrador
 
@@ -2698,6 +2722,46 @@ function parseDate(v){
   return '';
 }
 const fmtDate = iso => { if (!iso) return ''; const [y,m,d] = iso.split('-'); return d && m ? `${d}/${m}/${y}` : iso; };
+/* ---------- dias úteis: pagamento só de segunda a sexta, fora dos feriados nacionais ----------
+   Feriados bancários nacionais, incluindo os móveis (Carnaval, Sexta-feira Santa e Corpus Christi),
+   calculados a partir da Páscoa de cada ano. Feriados municipais ou estaduais entram em FERIADOS_EXTRAS. */
+const FERIADOS_FIXOS = {'01-01':'Confraternização Universal', '04-21':'Tiradentes', '05-01':'Dia do Trabalho',
+  '09-07':'Independência do Brasil', '10-12':'Nossa Senhora Aparecida', '11-02':'Finados',
+  '11-15':'Proclamação da República', '11-20':'Dia da Consciência Negra', '12-25':'Natal'};
+const FERIADOS_EXTRAS = {};   // ex.: {'2026-11-30': 'Feriado municipal'}
+const _feriadosCache = {};
+function domingoDePascoa(ano){                 // algoritmo de Meeus/Jones/Butcher
+  const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mes = Math.floor((h + l - 7 * m + 114) / 31), dia = ((h + l - 7 * m + 114) % 31) + 1;
+  return Date.UTC(ano, mes - 1, dia);
+}
+function feriadosDoAno(ano){
+  if (_feriadosCache[ano]) return _feriadosCache[ano];
+  const f = {};
+  Object.entries(FERIADOS_FIXOS).forEach(([md, nome]) => f[`${ano}-${md}`] = nome);
+  const p = domingoDePascoa(ano), dia = n => new Date(p + n * 864e5).toISOString().slice(0,10);
+  f[dia(-48)] = 'Carnaval'; f[dia(-47)] = 'Carnaval';
+  f[dia(-2)] = 'Sexta-feira Santa'; f[dia(60)] = 'Corpus Christi';
+  Object.entries(FERIADOS_EXTRAS).forEach(([d, nome]) => { if (d.startsWith(ano + '-')) f[d] = nome; });
+  return (_feriadosCache[ano] = f);
+}
+/** por que a data não é dia útil ('' quando é) */
+function motivoNaoUtil(iso){
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(iso || ''))) return '';
+  const dow = new Date(iso + 'T12:00:00Z').getUTCDay();
+  if (dow === 6) return 'sábado';
+  if (dow === 0) return 'domingo';
+  const nome = feriadosDoAno(+iso.slice(0,4))[iso];
+  return nome ? 'feriado — ' + nome : '';
+}
+const ehDiaUtil = iso => !motivoNaoUtil(iso);
+function proximoDiaUtil(iso){
+  let t = Date.parse(iso + 'T12:00:00Z'), d = iso;
+  for (let n = 0; n < 15 && motivoNaoUtil(d); n++){ t += 864e5; d = new Date(t).toISOString().slice(0,10); }
+  return d;
+}
 const hora = ts => new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
 
 function validCPF(c){ c = digits(c); if (c.length !== 11 || /^(\d)\1{10}$/.test(c)) return false;
@@ -2794,6 +2858,7 @@ function normalize(o){
     orgao: String(o.orgao??'').trim(),
     multa: Math.round(parseNum(o.multa)*100)/100,
     juros: Math.round(parseNum(o.juros)*100)/100,
+    cienteDiaUtil: parseDate(o.cienteDiaUtil) || '',
     porQuem: o.porQuem || APP.nome || '', em: o.em || Date.now()
   };
   if (!TIPOS.includes(r.tipoChave)) r.tipoChave = detectKey(r.pix).tipo;
@@ -3119,6 +3184,10 @@ const ENT = {
 /* ---------- mutações: tudo passa por aqui ---------- */
 async function aplicar(ops, origem, label, semHistorico, alvo, semBackup){
   if (!podeEditar()){ toast('Seu acesso é somente leitura.'); return false; }
+  // pagamento agendado em fim de semana ou feriado não passa: move para o dia útil ou não grava
+  if (((alvo || 'lanc') === 'lanc' || alvo === 'adi') && origem !== 'desfazer' && origem !== 'backup'){
+    if (!(await exigirDiasUteis(ops, alvo || 'lanc'))){ renderAll(); return false; }
+  }
   const nExcluir = ops.filter(o => o.acao === 'excluir').length;
   if (!semBackup && nExcluir >= BACKUP.limiteExclusao){
     const st = await fazerBackup(`antes de excluir ${nExcluir} itens`, true);
@@ -3139,7 +3208,7 @@ async function aplicar(ops, origem, label, semHistorico, alvo, semBackup){
       idsNovos.push(r.id);
       E.set([...E.get(), r]); mudancas.push({tipo:'set', id:r.id, dados:semId(r)});
       inversas.push({acao:'excluir', id:r.id});
-      resumo.push(`criou ${nomeDe(r)} · ${brl(r.valor)} em ${fmtDate(r.dataPagamento || r.dataPrevista)}`);
+      resumo.push(`criou ${nomeDe(r)} · ${brl(r.valor)} em ${fmtDate(r.dataPagamento || r.dataPrevista)}${r.cienteDiaUtil ? ` — dia não útil (${motivoNaoUtil(r.cienteDiaUtil)}), gravado com ciência` : ''}`);
     } else if (op.acao === 'excluir'){
       const r = E.get().find(x => x.id === op.id); if (!r) continue;
       E.set(E.get().filter(x => x.id !== op.id)); S.sel.delete(op.id);
@@ -3154,7 +3223,9 @@ async function aplicar(ops, origem, label, semHistorico, alvo, semBackup){
         const nv = col && col.type === 'money' ? Math.round(parseNum(v)*100)/100 : col && col.type === 'date' ? parseDate(v) : v;
         if (String(r[k]) === String(nv)) return;
         antes[k] = r[k]; depois[k] = nv; r[k] = nv;
-        resumo.push(`${nomeDe(r)} · ${col?col.t:k}: ${fmtVal(k,antes[k],COLUNAS)} → ${fmtVal(k,nv,COLUNAS)}`);
+        resumo.push(k === 'cienteDiaUtil'
+          ? (nv ? `${nomeDe(r)} · gravado em dia não útil com ciência: ${fmtDate(nv)} (${motivoNaoUtil(nv)})` : `${nomeDe(r)} · ciência de dia não útil retirada`)
+          : `${nomeDe(r)} · ${col?col.t:k}: ${fmtVal(k,antes[k],COLUNAS)} → ${fmtVal(k,nv,COLUNAS)}`);
       });
       if (!Object.keys(depois).length) continue;
       if (depois.pix !== undefined){ r.tipoChave = detectKey(r.pix).tipo; depois.tipoChave = r.tipoChave; }
@@ -3181,6 +3252,106 @@ async function aplicar(ops, origem, label, semHistorico, alvo, semBackup){
   return true;
 }
 const semId = r => { const o = {...r}; delete o.id; return o; };
+
+/* ---------- regra do dia útil nos pagamentos ----------
+   Só vale para o que ainda vai ser pago (Pendente/Agendado; adiantamento Aguardando).
+   O que já foi pago ou cancelado guarda a data em que aconteceu. */
+const REGRA_DIA_UTIL = {
+  lanc: {campo:'dataPagamento', lista: () => S.rows, aberto: s => s === 'Pendente' || s === 'Agendado',
+         padrao: s => STATUS.includes(s) ? s : 'Pendente'},
+  adi:  {campo:'dataAdiantada', lista: () => S.adi,  aberto: s => s === 'Aguardando',
+         padrao: s => STATUS_ADI.includes(s) ? s : 'Aguardando'}
+};
+const lancNaoUtil = r => REGRA_DIA_UTIL.lanc.aberto(r.status) && !!motivoNaoUtil(r.dataPagamento) && r.cienteDiaUtil !== r.dataPagamento;
+const lancCienteNaoUtil = r => REGRA_DIA_UTIL.lanc.aberto(r.status) && !!motivoNaoUtil(r.dataPagamento) && r.cienteDiaUtil === r.dataPagamento;
+function problemasDiaUtil(ops, alvo){
+  const R = REGRA_DIA_UTIL[alvo]; if (!R) return [];
+  const saida = [];
+  ops.forEach(op => {
+    let data, status, quem, valor;
+    if (op.acao === 'criar'){
+      const d = op.dados || {};
+      data = parseDate(d[R.campo]); status = R.padrao(d.status); quem = d.contribuinte; valor = d.valor;
+    } else if (op.acao === 'atualizar'){
+      const c = op.campos || {};
+      if (!(R.campo in c) && !('status' in c)) return;
+      const r = R.lista().find(x => x.id === op.id); if (!r) return;
+      data = R.campo in c ? parseDate(c[R.campo]) : r[R.campo];
+      status = 'status' in c ? c.status : r.status; quem = r.contribuinte; valor = r.valor;
+      if (r.cienteDiaUtil && r.cienteDiaUtil === data) return;   // já houve ciência para esta mesma data
+    } else return;
+    if (!data || !R.aberto(status)) return;
+    const motivo = motivoNaoUtil(data); if (!motivo) return;
+    saida.push({op, data, motivo, quem: String(quem || '').trim() || '(sem nome)', valor: parseNum(valor), sugerida: proximoDiaUtil(data)});
+  });
+  return saida;
+}
+const linhaDiaUtil = p => `<div class="du-l"><span class="du-quem"><b>${esc(p.quem)}</b><small>${brl(p.valor)}</small></span>
+  <span class="du-dt"><s>${fmtDate(p.data)}</s><small>${esc(p.motivo)}</small></span>
+  <span class="du-seta">→</span><span class="du-dt ok"><b>${fmtDate(p.sugerida)}</b><small>${DIAS_SEMANA_DU[new Date(p.sugerida + 'T12:00:00Z').getUTCDay()]}</small></span></div>`;
+const DIAS_SEMANA_DU = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+/** pergunta o que fazer; devolve true quando pode gravar (já com as datas corrigidas) */
+function exigirDiasUteis(ops, alvo){
+  const probs = problemasDiaUtil(ops, alvo);
+  if (!probs.length) return Promise.resolve(true);
+  const campo = REGRA_DIA_UTIL[alvo].campo;
+  return new Promise(resolve => {
+    let decidido = false;
+    const fim = v => { if (decidido) return; decidido = true; w.remove(); resolve(v); };
+    const w = modal(probs.length === 1 ? 'Data de pagamento fora de dia útil' : `${probs.length} datas fora de dia útil`,
+      `<p class="du-txt">Pagamentos só podem ser agendados de <b>segunda a sexta</b>, fora dos feriados nacionais.
+        ${probs.length === 1 ? 'Este lançamento não pode ser liberado' : 'Estes lançamentos não podem ser liberados'} com a data informada sem a sua ciência.</p>
+       <div class="du-lista">${probs.slice(0, 40).map(linhaDiaUtil).join('')}
+         ${probs.length > 40 ? `<div class="du-mais">e mais ${probs.length - 40}</div>` : ''}</div>`,
+      `<button class="btn" data-dunao>Cancelar</button>
+       <button class="btn du-ciente" data-duciente title="Grava na data informada e registra a ciência na Auditoria">Ciente — gravar na data selecionada</button>
+       <button class="btn primary" data-dusim>Mover para o próximo dia útil</button>`);
+    w.style.zIndex = 90;
+    w.addEventListener('click', e => {
+      if (e.target.closest('[data-dusim]')){
+        probs.forEach(p => {
+          if (p.op.acao === 'criar') p.op.dados = {...p.op.dados, [campo]: p.sugerida};
+          else p.op.campos = {...p.op.campos, [campo]: p.sugerida};
+        });
+        return fim(true);
+      }
+      if (e.target.closest('[data-duciente]')){
+        // mantém a data e guarda a ciência: o aviso não volta a cobrar este lançamento nesta data
+        probs.forEach(p => {
+          if (p.op.acao === 'criar') p.op.dados = {...p.op.dados, cienteDiaUtil: p.data};
+          else p.op.campos = {...p.op.campos, cienteDiaUtil: p.data};
+        });
+        return fim(true);
+      }
+      if (e.target === w || e.target.closest('[data-dunao],[data-close]')) fim(false);
+    }, true);
+  });
+}
+/** a tela de Pagamentos: corrige de uma vez o que já estava gravado em dia não útil */
+async function corrigirDiasNaoUteis(){
+  const lista = S.rows.filter(lancNaoUtil).sort((x,y) => x.dataPagamento.localeCompare(y.dataPagamento));
+  if (!lista.length) return toast('Nenhum pagamento em fim de semana ou feriado.');
+  if (!podeEditar()) return toast('Seu acesso é somente leitura.');
+  const ops = lista.map(r => ({acao:'atualizar', id:r.id, campos:{dataPagamento: proximoDiaUtil(r.dataPagamento)}}));
+  const probs = lista.map(r => ({quem:r.contribuinte, valor:r.valor, data:r.dataPagamento,
+    motivo:motivoNaoUtil(r.dataPagamento), sugerida:proximoDiaUtil(r.dataPagamento)}));
+  const w = modal(`${lista.length} pagamento(s) em dia não útil`,
+    `<p class="du-txt">Estes lançamentos em aberto estão agendados para fim de semana ou feriado e não podem ser liberados assim.
+      Confira e mova cada um para o próximo dia útil.</p>
+     <div class="du-lista">${probs.map(linhaDiaUtil).join('')}</div>`,
+    `<button class="btn" data-close>Agora não</button>
+     <button class="btn du-ciente" data-duciente2>Ciente — manter as datas</button>
+     <button class="btn primary" data-ducorrigir>Mover ${lista.length === 1 ? 'para o dia útil' : 'todos para o dia útil'}</button>`);
+  w.querySelector('[data-duciente2]').onclick = async () => {
+    w.remove();
+    const ciencia = lista.map(r => ({acao:'atualizar', id:r.id, campos:{cienteDiaUtil: r.dataPagamento}}));
+    if (await aplicar(ciencia, 'manual', 'ciência de pagamento em dia não útil')) toast(`${ciencia.length} lançamento(s) mantido(s) na data, com ciência registrada.`);
+  };
+  w.querySelector('[data-ducorrigir]').onclick = async () => {
+    w.remove();
+    if (await aplicar(ops, 'manual', 'datas movidas para dia útil')) toast(`${ops.length} data(s) movida(s) para dia útil.`);
+  };
+}
 const aplicarRec = (ops, origem, label) => aplicar(ops, origem, label, false, 'rec');
 function fmtVal(k, v, colunas){ const col = (colunas || COLS).find(c=>c.k===k);
   return col && col.type === 'money' ? brl(v) : col && col.type === 'date' ? fmtDate(v) : (v === '' || v == null ? '—' : String(v)); }
@@ -3382,6 +3553,15 @@ function renderTable(){
       <span>mesmo valor para a mesma pessoa ou a mesma chave Pix</span>
       <button class="btn sm primary" id="btDupVer">Verificar</button>`;
   }
+  const naoUteis = S.rows.filter(lancNaoUtil);
+  const avDU = $('#duAviso');
+  if (avDU){
+    avDU.classList.toggle('hide', !naoUteis.length);
+    if (naoUteis.length) avDU.innerHTML = `<span class="dup-ico">⛔</span>
+      <b>${naoUteis.length === 1 ? '1 pagamento agendado' : naoUteis.length + ' pagamentos agendados'} em fim de semana ou feriado</b>
+      <span>não podem ser liberados nessa data</span>
+      <button class="btn sm primary" id="btDUVer">Corrigir datas</button>`;
+  }
   $('#thead').innerHTML = '<th class="cbx"><input type="checkbox" id="chkAll"></th>' +
     COLS.map(c => `<th data-k="${c.k}" class="${c.al||''}" style="width:${c.w}" title="${c.t}">${c.t}<span class="ar"> ${S.sort.k===c.k ? (S.sort.dir>0?'▲':'▼') : ''}</span></th>`).join('') +
     '<th class="rowmenu"></th>';
@@ -3401,7 +3581,15 @@ function renderTable(){
             ${r.validado ? `<span class="valid-info">${fmtDate(new Date(r.validadoEm).toISOString().slice(0,10))}<br>${esc(String(r.validadoPor).split(' ')[0])}</span>` : ''}
           </div>`;
         else if (c.type === 'money') inner = `<div class="cell num" data-id="${r.id}" data-k="${c.k}">${brl(v)}</div>`;
-        else if (c.type === 'date') inner = `<div class="cell${al}" data-id="${r.id}" data-k="${c.k}"><span class="txt">${fmtDate(v)}</span></div>`;
+        else if (c.type === 'date'){
+          const nu = c.k === 'dataPagamento' && lancNaoUtil(r) ? motivoNaoUtil(v) : '';
+          const ci = !nu && c.k === 'dataPagamento' && lancCienteNaoUtil(r) ? motivoNaoUtil(v) : '';
+          inner = ci
+            ? `<div class="cell${al} nao-util-ciente" data-id="${r.id}" data-k="${c.k}" title="${esc(fmtDate(v) + ' é ' + ci + ' — gravado com ciência')}"><span class="txt">${fmtDate(v)}</span></div>`
+            : nu
+            ? `<div class="cell${al} nao-util" data-id="${r.id}" data-k="${c.k}" title="${esc(fmtDate(v) + ' é ' + nu + ' — não pode ser liberado. Próximo dia útil: ' + fmtDate(proximoDiaUtil(v)))}"><span class="txt">${fmtDate(v)}</span></div>`
+            : `<div class="cell${al}" data-id="${r.id}" data-k="${c.k}"><span class="txt">${fmtDate(v)}</span></div>`;
+        }
         else if (c.type === 'chip'){
           const cls = c.k === 'operacao' ? opColor(v) : c.k === 'status' ? 'st-'+v : 'k-'+(v||'INDEFINIDO');
           const estilo = c.k === 'operacao' ? estiloOp(v) : '';
@@ -4533,7 +4721,7 @@ window.MPF_incluirLiminares = function(dados){
   if (!dados.lista.length) return toast('Nenhum parceiro com valor em aberto neste mês.');
   const [ano, mes] = dados.mes.split('-').map(Number);
   const ultimo = new Date(ano, mes, 0).getDate();
-  const dataDo = dia => `${ano}-${String(mes).padStart(2,'0')}-${String(Math.min(dia || 5, ultimo)).padStart(2,'0')}`;
+  const dataDo = dia => proximoDiaUtil(`${ano}-${String(mes).padStart(2,'0')}-${String(Math.min(dia || 5, ultimo)).padStart(2,'0')}`);
   const total = dados.lista.reduce((s,x) => s + x.valor, 0);
 
   // quem já foi incluído neste mês não vem marcado, para não duplicar
@@ -4683,7 +4871,7 @@ function escolherQualExcluir(g){
     if (duplicidades().length) abrirDuplicidades();
   };
 }
-$('#view-lanc').addEventListener('click', e => { if (e.target.closest('#btDupVer')) abrirDuplicidades(); });
+$('#view-lanc').addEventListener('click', e => { if (e.target.closest('#btDupVer')) abrirDuplicidades(); if (e.target.closest('#btDUVer')) corrigirDiasNaoUteis(); });
 $('#tbody').addEventListener('dblclick', e => {
   const tr = e.target.closest('tr.dup'); if (tr && !e.target.closest('.cell')) abrirDuplicidades();
 });
@@ -4944,6 +5132,20 @@ function modal(title, bodyHTML, footHTML){
 }
 
 /* ---------- novo lançamento ---------- */
+/** avisa ao digitar uma data de pagamento em fim de semana ou feriado e oferece o próximo dia útil */
+function ligarDicaDiaUtil(inp){
+  if (!inp) return;
+  const dica = document.createElement('div'); dica.className = 'du-dica';
+  inp.insertAdjacentElement('afterend', dica);
+  const mostra = () => {
+    const mo = motivoNaoUtil(inp.value);
+    dica.innerHTML = mo ? `<span>⛔ ${fmtDate(inp.value)} é ${esc(mo)} — não pode ser liberado.</span>
+      <button type="button" class="btn sm" data-duusar>Usar ${fmtDate(proximoDiaUtil(inp.value))}</button>` : '';
+  };
+  inp.addEventListener('input', mostra); inp.addEventListener('change', mostra);
+  dica.addEventListener('click', e => { if (e.target.closest('[data-duusar]')){ inp.value = proximoDiaUtil(inp.value); mostra(); } });
+  mostra();
+}
 $('#btnNew').addEventListener('click', () => {
   if (S.view === 'rec') return novoRecebimento();
   if (!podeEditar()) return toast('Seu acesso é somente leitura.');
@@ -4988,6 +5190,7 @@ $('#btnNew').addEventListener('click', () => {
     `<button class="btn" data-close>Cancelar</button><button class="btn primary" id="n_ok">Adicionar lançamento</button>`);
   ligarAutocomplete(m);
   ligarAcrescimo(m);
+  ligarDicaDiaUtil(m.querySelector('#n_dp'));
   m.querySelector('#n_ok').addEventListener('click', async () => {
     const conta = m.__valorFinal ? m.__valorFinal() : null;
     const comAcrescimo = conta && conta.taxa > 0 && conta.base > 0;
@@ -7334,6 +7537,7 @@ function normalizeAdi(o){
     pix: String(o.pix ?? '').trim(),
     tipoChave: String(o.tipoChave ?? '').trim().toUpperCase() || detectKey(o.pix).tipo,
     base: String(o.base ?? '').trim(),
+    cienteDiaUtil: parseDate(o.cienteDiaUtil) || '',
     porQuem: o.porQuem || APP.nome || '', em: o.em || Date.now()
   };
 }
@@ -8673,7 +8877,6 @@ $('#sbPanel').addEventListener('click', e => {
 function renderPainelPlanilha(){
   const e = Balanco.estoque(), fp = Balanco.futurosPagamentos();
   const lim = (window.LIM && LIM.aPagar) ? LIM.aPagar() : null;
-  const rbMes = reembolsosDoMes(getTodaySP().slice(0,7));
   const entradas = Balanco.entradasFuturas(), saidas = Balanco.saidasFuturas(), lucro = Balanco.lucroPrevisto();
 
   $('#balCaixa').innerHTML = `
@@ -8687,10 +8890,6 @@ function renderPainelPlanilha(){
       ${toCents(Balanco.prejuizos()) ? `<div class="pl-lin"><span>Prejuízos registrados</span><b class="pl-s">${brl(Balanco.prejuizos())}</b></div>` : ''}
 
       <div class="pl-lin destaque"><span>Posição contratual líquida</span><b class="${lucro < 0 ? 'bl-neg' : 'bl-pos'}">${brl(lucro)}</b></div>
-      ${!rbMes.length ? '' : `<div class="pl-lin fraca"><span>Reembolsos do mês
-        <small class="pl-sub">${rbMes.length} lançamento(s)</small></span>
-        <b class="pl-s">${brl(totalReembolsos(rbMes))}</b>
-        <small class="pl-ja">já dentro dos pagamentos</small></div>`}
       <div class="pl-exp">Contas a receber previstas menos contas a pagar previstas. Não é caixa, lucro nem patrimônio.</div>
     </div>
     <div class="pl-bloco">
@@ -9647,7 +9846,7 @@ const Mensal = (() => {
         if (!lim || !lim.total || lim.mes !== chave) return '';
         return `<div class="mn-bl lim" data-irlimfx="1" title="Abrir o Fechamento do controle de liminares">
           <div class="lab">Liminares do mês</div>
-          <div class="big" style="color:var(--warn)">${brlC(lim.total)}</div>
+          <div class="big" style="color:var(--warn)">${brlC(Math.round(lim.total * 100))}</div>
           <div class="mn-lin"><span>${lim.parceiros} parceiro(s) aguardando</span><b>fora do fluxo</b></div>
           <div class="mn-lin"><span class="mn-ir">incluir em Pagamentos →</span></div>
         </div>`;
